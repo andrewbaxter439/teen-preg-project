@@ -4,7 +4,7 @@ library(pxR)
 library(tidyverse)
 library(readxl)
 
-setwd("T:/projects/Student-ABaxter/DataAnalysis/teen-preg-project")
+#setwd("T:/projects/Student-ABaxter/DataAnalysis/teen-preg-project")
 
 # Ireland births
 

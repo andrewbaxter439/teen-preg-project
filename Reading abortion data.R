@@ -1,5 +1,5 @@
 library(tidyverse)
-setwd("T:/projects/Student-ABaxter/DataAnalysis/teen-preg-project")
+#setwd("T:/projects/Student-ABaxter/DataAnalysis/teen-preg-project")
 
 # European Health Information Gateway abortion stats
 
@@ -27,4 +27,4 @@ country_names<-c("Austria", "Australia", "Belgium", "Bulgaria", "Canada", "Croat
 country_names %>% subset(!(country_names %in% all_EU_ab_tidy$Country)) # countries with missing data
 all_EU_ab_tidy$Country %>% subset(!(all_EU_ab_tidy$Country %in% country_names)) %>% unique() # countries included in database, not used here
 
-allbirths %>% filter(is.na(Country)) %>% group_by(Code) %>% summarise(n=n()) # find codes not translated
+all_EU_ab_tidy %>% filter(is.na(Country)) %>% group_by(Code) %>% summarise(n=n()) # find codes not translated

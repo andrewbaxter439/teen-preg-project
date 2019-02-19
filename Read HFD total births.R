@@ -45,6 +45,7 @@ allpopsroot <- foreach(Code=unique(teenbirths$Code), .combine=rbind) %dopar% {
   readpop(Code)
 }
 
+# Standardise Germany labels - combining east/west pre-1990
 
 allpops <- allpopsroot %>%
   filter(Year<1990, str_detect(Code, "DEU")) %>%
