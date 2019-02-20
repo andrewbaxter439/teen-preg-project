@@ -13,13 +13,47 @@ all_EU_ab_tidy <- all.Europe.ab %>%
                                  ifelse(Code=="DEU", "Germany", Country)))) %>%
   select(Country, Year, Total, Code)
 
-country_names<-c("Austria", "Australia", "Belgium", "Bulgaria", "Canada", "Croatia", "Cyprus",
-                 "Czechia", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", 
-                 "Hungary", "Iceland", "Ireland", "Italy", "Latvia", "Lithuania", "Luxembourg",
-                 "Malta","Netherlands", "New Zealand", "Norway", "Poland", "Portugal", "Romania",
-                 "Slovak Republic", "Slovenia", "Spain", "Sweden", "Switzerland", "United Kingdom",
-                 "Scotland", "England and Wales", "Northern Ireland",
-                 "United States of America")
+country_names <-
+  c(
+    "Austria",
+    "Australia",
+    "Belgium",
+    "Bulgaria",
+    "Canada",
+    "Croatia",
+    "Cyprus",
+    "Czechia",
+    "Denmark",
+    "Estonia",
+    "Finland",
+    "France",
+    "Germany",
+    "Greece",
+    "Hungary",
+    "Iceland",
+    "Ireland",
+    "Italy",
+    "Latvia",
+    "Lithuania",
+    "Luxembourg",
+    "Malta",
+    "Netherlands",
+    "New Zealand",
+    "Norway",
+    "Poland",
+    "Portugal",
+    "Romania",
+    "Slovak Republic",
+    "Slovenia",
+    "Spain",
+    "Sweden",
+    "Switzerland",
+    "United Kingdom",
+    "Scotland",
+    "England and Wales",
+    "Northern Ireland",
+    "United States of America"
+  )
 
 
 
