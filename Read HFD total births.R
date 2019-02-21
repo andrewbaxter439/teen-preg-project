@@ -74,7 +74,7 @@ allbirths %>%
 # Read population file -----------------------------------------------------
 
 readpop <- function(code) {
-  filename <- paste("T:/projects/Student-ABaxter/DataAnalysis/Population/",
+  filename <- paste("DataAnalysis/Population/",
                     code, ".Population.txt",sep="")
   pop <- read.fwf(filename, widths = c(7,13,20,16,16),sep="", skip=2,
                   header=TRUE)

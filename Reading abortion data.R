@@ -1,5 +1,4 @@
 library(tidyverse)
-#setwd("T:/projects/Student-ABaxter/DataAnalysis/teen-preg-project")
 
 # European Health Information Gateway abortion stats
 
