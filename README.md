@@ -3,3 +3,4 @@
 This is a first attempt at trying out Git/Github version control. Let's see how it goes!
 
 An attempt at creating a branch and merging
+/n A new line to add to readme file
