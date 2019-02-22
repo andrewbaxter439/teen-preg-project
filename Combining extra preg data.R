@@ -4,9 +4,7 @@ library(pxR)
 library(tidyverse)
 library(readxl)
 
-#setwd("T:/projects/Student-ABaxter/DataAnalysis/teen-preg-project")
-
-# Ireland births
+# Ireland births -----------------------------------------------------------------
 
 Ire_births<-as.data.frame(read.px("IRE2007-2017.px"))
 
@@ -34,7 +32,7 @@ Ire_tidy <- Ire_births %>%
   arrange(Year, Age)
 
 
-# Australia births
+# Australia births ------------------------------------------------------------------------
 Aus2004 <- tibble(Code="AUS", Year=2004, Age=15:19, Total=c(356,886,380,502,572), Country="Australia")
 Aus1984to2003 <- read_tsv("Ausnuptcon.txt") %>%
   gather("Year", "Total", 2:10) %>%
@@ -62,7 +60,7 @@ Ausprerates <- tibble(Year=c(1985:2003),
                       Country="Australia", agegrp=3, agecat="Under 20",
                       rate = c(22.8,21.8,20.6,20.3,20.6,22.1,22.1,22.0,20.9,20.7,20.4,20.1,19.8,18.9,18.5,17.7,17.7,17.4,16.3))
 
-# New Zealand - abortions, stillbirths and livebirths combined
+# New Zealand - abortions, stillbirths and livebirths combined ----------------------------------
 
 NZ_totalrates <- read_csv("NZ_totalpregrates.csv", skip=2, col_names=c("Age", "Under 15", "Under 20"))[1:26,]
   
