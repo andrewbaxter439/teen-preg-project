@@ -52,7 +52,7 @@ country_names <-
     "United States of America"
   )
 
-data.completion <- tibble(Country = country_names)
+all.countries <- tibble(Country = country_names)
 
 
 # Filling with other data ------------------------------------------------------------------------------------
@@ -63,15 +63,15 @@ data.completion <- teenbirths %>%
   summarise(minYr = min(Year),
             maxYr = max(Year)) %>% 
   unite(2:3, col="Births", sep = " to ") %>% 
-  right_join(data.completion, by="Country")
+  right_join(all.countries, by="Country")
 
 age.structure <- teenbirths %>% 
   group_by(Country) %>% 
   summarise(minAge = min(Age),
             maxYAge = max(Age)) %>% 
-  unite(2:3, col="Births", sep = " to ")
+  unite(2:3, col="Births", sep = ":") %>% 
+  right_join(all.countries, by="Country")
 
 # Saving Excel -----------------------------------------------------------------------------------------------
 
-
-                          
+                        
