@@ -6,7 +6,10 @@ library(gganimate)
 #library(rnaturalearth)
 #library(stringr)
 
-allbirths <- read_tsv("birthsRR.txt")
+
+# Reading births file ----------------------------------------------------------------------------------------
+
+allbirths <- read_tsv("Downloaded data files/birthsRR.txt")
 ccodes <- read_tsv("country_codes.txt")
 allbirths[["Country"]] <-
   pull(ccodes[match(allbirths[["Code"]], ccodes[["Code"]]), "Country"])
