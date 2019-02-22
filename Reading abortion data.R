@@ -61,3 +61,4 @@ country_names %>% subset(!(country_names %in% all_EU_ab_tidy$Country)) # countri
 all_EU_ab_tidy$Country %>% subset(!(all_EU_ab_tidy$Country %in% country_names)) %>% unique() # countries included in database, not used here
 
 all_EU_ab_tidy %>% filter(is.na(Country)) %>% group_by(Code) %>% summarise(n=n()) # find codes not translated
+# A new line to test if I can add things
