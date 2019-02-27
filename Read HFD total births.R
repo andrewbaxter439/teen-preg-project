@@ -77,7 +77,7 @@ allbirths %>%
 # Read population file -----------------------------------------------------
 
 readpop <- function(code) {
-  filename <- paste("DataAnalysis/Population/",
+  filename <- paste("Downloaded data files/Population/",
                     code, ".Population.txt",sep="")
   pop <- read.fwf(filename, widths = c(7,13,20,16,16),sep="", skip=2,
                   header=TRUE)
@@ -165,7 +165,7 @@ birthrates %>%
 
 
 
-# Scotland filer and graph to trial data - not used
+### Scotland filer and graph to trial data - not used -------------
 
 allbirths %>%
   mutate(Age=as.numeric(sub("-", "", Age))) %>%
