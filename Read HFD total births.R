@@ -174,7 +174,7 @@ allbirths %>%
   geom_line() +
   xlim(1985, NA) +
   theme_minimal()
-Scopop<-read_tsv("SCOPop.txt")
+Scopop<-read_tsv("Downloaded data files/SCOPop.txt")
 
 allbirths %>%
   mutate(Age=sub("-", "", Age)) %>%
