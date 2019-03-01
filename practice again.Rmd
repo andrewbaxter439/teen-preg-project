@@ -3,8 +3,10 @@ title: "RMD practice - again"
 author: "Andrew Baxter"
 date: "1 March 2019"
 output: 
-  word_document: 
+  html_document: 
     keep_md: yes
+    template: "default.html_document"
+    toc: true
 ---
 
 ```{r eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
@@ -15,8 +17,9 @@ library(broom)
 
 
 
-```{r graph}
-all.UK.rates <- read_xlsx("Conception rates by age and country.xlsx", sheet = "Under 18")
+```{r graph, warning=FALSE}
+all.UK.rates <- read_xlsx("Conception rates by age and country.xlsx",
+                          sheet = "Under 18")
 
 all.UK.rates %>% filter(Country=="Scotland"|
                         Country=="England"|
@@ -28,7 +31,10 @@ all.UK.rates %>% filter(Country=="Scotland"|
   group_by(Country, Category) %T>% 
   {print(group_map(., ~tidy(lm(Value ~ Year, data=.))) %>% 
            arrange(Category, term, Country))} %>% 
-  {ggplot(., aes(x=Year, y=Value, group=interaction(Category, Country), col=Country)) +
+  {ggplot(., aes(x=Year,
+                 y=Value,
+                 group=interaction(Category, Country),
+                 col=Country)) +
   geom_point() +
   geom_smooth(method="lm")}
 ```

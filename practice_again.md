@@ -3,8 +3,10 @@ title: "RMD practice - again"
 author: "Andrew Baxter"
 date: "1 March 2019"
 output: 
-  word_document: 
+  html_document: 
     keep_md: yes
+    template: "default.html_document"
+    toc: true
 ---
 
 
@@ -13,7 +15,8 @@ output:
 
 
 ```r
-all.UK.rates <- read_xlsx("Conception rates by age and country.xlsx", sheet = "Under 18")
+all.UK.rates <- read_xlsx("Conception rates by age and country.xlsx",
+                          sheet = "Under 18")
 
 all.UK.rates %>% filter(Country=="Scotland"|
                         Country=="England"|
@@ -25,7 +28,10 @@ all.UK.rates %>% filter(Country=="Scotland"|
   group_by(Country, Category) %T>% 
   {print(group_map(., ~tidy(lm(Value ~ Year, data=.))) %>% 
            arrange(Category, term, Country))} %>% 
-  {ggplot(., aes(x=Year, y=Value, group=interaction(Category, Country), col=Country)) +
+  {ggplot(., aes(x=Year,
+                 y=Value,
+                 group=interaction(Category, Country),
+                 col=Country)) +
   geom_point() +
   geom_smooth(method="lm")}
 ```
@@ -55,13 +61,5 @@ all.UK.rates %>% filter(Country=="Scotland"|
 ## 18 Wales           2 Year         -2.74e+0    0.0954  -28.7         2.35e-9
 ```
 
-```
-## Warning: Removed 23 rows containing non-finite values (stat_smooth).
-```
-
-```
-## Warning: Removed 23 rows containing missing values (geom_point).
-```
-
-![](practice_again_files/figure-docx/graph-1.png)<!-- -->
+![](practice_again_files/figure-html/graph-1.png)<!-- -->
 
