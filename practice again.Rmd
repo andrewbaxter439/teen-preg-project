@@ -1,0 +1,35 @@
+---
+title: "RMD practice - again"
+author: "Andrew Baxter"
+date: "1 March 2019"
+output: 
+  word_document: 
+    keep_md: yes
+---
+
+```{r eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(readxl)
+library(broom)
+```
+
+
+
+```{r graph}
+all.UK.rates <- read_xlsx("Conception rates by age and country.xlsx", sheet = "Under 18")
+
+all.UK.rates %>% filter(Country=="Scotland"|
+                        Country=="England"|
+                        Country=="Wales") %>% 
+  gather("Year", "Value", -1) %>% 
+  mutate(Category = ifelse(Year<1999, 0,
+                ifelse(Year<2007, 1, 2)),
+         Year=as.numeric(Year)) %>% 
+  group_by(Country, Category) %T>% 
+  {print(group_map(., ~tidy(lm(Value ~ Year, data=.))) %>% 
+           arrange(Category, term, Country))} %>% 
+  {ggplot(., aes(x=Year, y=Value, group=interaction(Category, Country), col=Country)) +
+  geom_point() +
+  geom_smooth(method="lm")}
+```
+
