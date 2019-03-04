@@ -55,9 +55,9 @@ country_names <-
     "United States of America"
   )
 
-allbirths %>%
+teenBirths <- allbirths %>%
   mutate(Age=as.numeric(sub("-", "", Age))) %>%
-  filter(Age>12 & Age<21) -> teenbirths
+  filter(Age>12 & Age<21)
 
 # countries with missing data
 country_names %>%
@@ -116,53 +116,50 @@ allpops <- allpopsroot %>%
   mutate(Year=2001, Code="POL") %>%
   right_join(allpops)
 
-# Combine with births -----------------------------------------------------
 
-teenrates <- left_join(teenbirths,
-                       allpops[c(1,2,5,6)],
-                       by=c("Year","Age","Code")) %>%
-  rename(Femalepop = Female)
+# Grouping births and populations ----------------------------------------------------------------------------
 
+birthAgeGrps <- tibble(Age=factor(c(12:15, 12:17, 12:19)),
+                     agegrp=factor(c(1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,3,3),
+                                   labels=c("Under 16", "Under 18", "Under 20")))  # Three ranges of births
 
+sumBirths <- teenBirths %>% 
+  merge(birthAgeGrps) %>% 
+  group_by(Code, Country, Year, agegrp) %>% 
+  summarise(sumBirths = sum(Total)) # create summary
 
+popAgeGrps <- tibble(Age=factor(c(13:15, 15:17, 15:19)),
+                     agegrp=factor(c(1,1,1,2,2,2,3,3,3,3,3),
+                                   labels=c("Under 16", "Under 18", "Under 20")))  # Three ranges of pop
 
+sumPops <- allpops %>%
+  merge(popAgeGrps) %>%
+  group_by(Code, Year, agegrp) %>% 
+  summarise(sumPops = sum(Female)) # create summary
 
-# Group and calculate -----------------------------------------------------
+# Combine pop and births and calculate rates ------------------------------
 # have included age 12 births here
 # - check ONS guidlines and methods and report appropriately
 
-agegrps<-tibble(Age=factor(c(12:15, 12:17, 12:19)),
-                agegrp=c(1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,3,3)) # denominators for rate calc
-agecats<-tibble(Age=factor(c(13:15, 15:17, 15:19)),
-                agecat=c(1,1,1,2,2,2,3,3,3,3,3)) # numerators for rate calc
-agecalcs<-merge(agegrps, agecats)
 
-birthrates <- teenrates %>%
+birthRates <-left_join(sumBirths, sumPops,
+                       by=c("Year","agegrp","Code")) %>%
   filter(Year>1984, Country %in% country_names) %>%
-  merge(agecalcs) %>%
-  group_by(Year, Country, agegrp, agecat) %>%
-  summarise(popsum=sum(Femalepop), birthsum=sum(Total)) %>%
-  ungroup() %>%
-  filter(agegrp==agecat) %>%
-  mutate(agecat=factor(agecat,
-                       labels = c("Under 16", "Under 18", "Under 20"))) %>%
-  mutate(rate=birthsum/popsum)
-  
+  mutate(rate=1000*sumBirths/sumPops)
+
+
 # Graphs of all -----------------------------------------------------
 
-birthrates %>%
-  filter(Country!="United Kingdom"& Country!="Bulgaria") %>% # Scot/EngWa/NI seperate
+birthRates %>%
+  filter(Country!="United Kingdom"& Country!="Bulgaria") %>% # Scot/EngWa/NI seperate, BUL outlier
   ggplot(aes(x=Year, y=rate, col=Country, group=Country)) +
     geom_line() +
    xlim(1985,2016) +
-#   scale_y_continuous(limits=c(0,0.065)) +
     theme_minimal() +
-    facet_wrap(~agecat) +
-#  geom_smooth(aes(col=NULL,group=NULL), size=1.5, col="steelblue")
+    facet_wrap(~agegrp) +
     stat_summary(aes(col=NULL, group=NULL),
-                 fun.y=mean, geom="line", size=1.5, col="steelblue") 
-#    stat_summary(aes(col=NULL,group=NULL), geom="ribbon", fun.data = mean_sdl, fun.ymin = "Lower", fun.ymax = "Upper", alpha=0.3, fill="steelblue")
-
+                 fun.y=mean, geom="line", size=1.5, col="steelblue") +
+  labs(y = "Rate of births per 1000 girls")
 
 
 ### Scotland filer and graph to trial data - not used -------------
