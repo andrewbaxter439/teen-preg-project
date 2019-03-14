@@ -1,5 +1,5 @@
 ---
-title: "RMD practice - again"
+title: "Showing use of group_map"
 author: "Andrew Baxter"
 date: "1 March 2019"
 output: 
