@@ -125,29 +125,54 @@ EngData %>% ggplot(aes(x=Year, y=Value, group=interaction(Cat1, Cat2))) +
 EngMod2 <- lm(Value ~ Time + Cat1 + Trend1 + Cat2 + Trend2, data = EngData)  
 summary(EngMod2)
 
-# Test for autocorrelation
+## Test for autocorrelation
 
-plot(EngData$Time, residuals(EngMod2))
-dwt(EngMod2, max.lag=10, alternative="two.sided")
+testAutocorr(EngData, EngMod2)  # Potential MA3?
 
-par(mfrow=c(1,2))
+# plot(EngData$Time, residuals(EngMod2))
+# dwt(EngMod2, max.lag=10, alternative="two.sided")
+# 
+# par(mfrow=c(1,2))
+# 
+# # Produce plots
+# acf(residuals(EngMod2))
+# acf(residuals(EngMod2),type='partial')
 
-# Produce plots
-acf(residuals(EngMod2))
-acf(residuals(EngMod2),type='partial')
-
-EngMod2_p3 <- gls(Value ~ Time + Cat1 + Trend1 + Cat2 + Trend2,
+EngMod2_q3 <- gls(Value ~ Time + Cat1 + Trend1 + Cat2 + Trend2,
                   data=EngData,
-                  correlation = corARMA(p=3, form=~Time),
+                  correlation = corARMA(q=3, form=~Time),
                   method = "ML")
-summary(EngMod2_p3)
+summary(EngMod2_q3)
+coef(EngMod2_q3)
 
-EngMod2_p3 %>% update(correlation=corARMA(p=4, form=~Time)) %>% 
-  anova(EngMod2_p3)
+EngMod2_q3 %>% update(correlation=corARMA(q=4, form=~Time)) %>% 
+  anova(EngMod2_q3)
 
-EngMod2_p3 %>% update(correlation=corARMA(p=3, q=1, form=~Time)) %>% 
-  anova(EngMod2_p3)
+EngMod2_q3 %>% update(correlation=corARMA(q=3, p=1, form=~Time)) %>% 
+  anova(EngMod2_q3)  # Significantly different
 
+EM2q3_co <- EngMod2_q3$coefficients
+
+EngMod2_q3_cfac <- tibble(Time=8:25, 
+                          Cat=c(rep.int(0,9), rep(1,9)),
+                          Trend1=c(1:18),
+                          Trend2=c(rep(0,9), c(1:9)),
+                          Value=(
+                            EM2q3_co[1] +
+                              EM2q3_co[2]*Time +
+                              EM2q3_co[3]*Cat +
+                              EM2q3_co[4]*Trend1*Cat
+                          ))
+
+EngData %>% 
+  mutate(predict=predict(EngMod2_q3)) %>% 
+  ggplot(aes(Time,Value, group=interaction(Cat1, Cat2))) +
+  geom_point() +
+  geom_line(aes(y=predict), col="red") + 
+  geom_line(data = EngMod2_q3_cfac, aes(x=Time, y=Value, group=Cat), linetype="dashed", col="#FC8D62", size=1, inherit.aes = FALSE) +
+  scale_x_continuous(breaks=c(4,9,14,19,24),labels = seq(1995, 2015, by=5)) +
+  geom_vline(xintercept=7.5, linetype="dotted", col="#000000CC") +
+  geom_vline(xintercept=16.5, linetype="dotted", col="#000000CC")
 
 # Preliminary analysis - Eng v Scot --------------------------------------------------------------------------
 ## Setting up data
@@ -155,7 +180,7 @@ EngMod2_p3 %>% update(correlation=corARMA(p=3, q=1, form=~Time)) %>%
   all.UK.rates %>% filter(Country=="Scotland"|
                           Country=="England") %>% 
   gather("Year", "Value", -1) %>%
-  filter(Year>1991) %>%
+  filter(Year>1991, !is.na(Value)) %>%
   arrange(Country) %>%
   mutate(England = ifelse(Country=="England", 1, 0),
          Year=as.numeric(Year),
@@ -171,13 +196,45 @@ EngMod2_p3 %>% update(correlation=corARMA(p=3, q=1, form=~Time)) %>%
 EngScotContro %T>% 
   {print(ggplot(., aes(Year, Value, group=interaction(Country, Cat1), col=Country))+
   geom_point() + geom_smooth(method="lm", se=FALSE))} %>% 
-  lm(Value ~ Time + England + Time*England + Cat1 + Trend1 + Cat1*England + Trend1*England, data=.) %>% 
+  lm(Value ~ Time + England + Time_Eng + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng, data=.) %>% 
   assign("modScot99",., envir = .GlobalEnv) %>% 
   print(.$coefs)
 #  summary()
 
-testAutocorr(EngScotContro, modScot99)
-  
+testAutocorr(EngScotContro, modScot99)  # Indicates AR3
+
+modScot99_p3 <- gls(Value ~ Time + England + Time_Eng + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng,
+                     data=EngScotContro,
+                     corARMA(p=3, form=~Time|England),
+                     method = "ML")
+summary(modScot99_p3)
+coef(modScot99_p3)
+
+## Testing other models
+modScot99_p3 %>% update(correlation = corARMA(p=4, form = ~Time|England)) %>% 
+  anova(modScot99)
+
+modScot99_p3 %>% update(correlation = corARMA(p=3, q=1, form = ~Time|England)) %>% 
+  anova(modScot99)  # Conclusion: p3 is a bad model!
+
+modScot99_p3_cfac <- tibble(Time=c(8:25),
+                             Trend1=c(1:18),
+                             Value=(modScot99_p3$coefficients[1] + 
+                               modScot99_p3$coefficients[2]*Time +
+                               modScot99_p3$coefficients[3] +
+                               modScot99_p3$coefficients[4]*Time +
+                               modScot99_p3$coefficients[5] +
+                               modScot99_p3$coefficients[6]*Trend1))
+
+EngScotContro %>% 
+  mutate(predict = predict(modScot99_p3)) %>% 
+  ggplot(aes(Time, Value, col=Country, group=interaction(Country, Cat1))) +
+  geom_point() +
+  geom_line(data = modScot99_p3_cfac, aes(x=Time, y=Value), linetype="dashed", col="#FC8D62", size=1, inherit.aes = FALSE) +
+  geom_line(aes(y=predict), size=1) +
+  scale_x_continuous(breaks=c(4,9,14,19,24),labels = seq(1995, 2015, by=5)) +
+  geom_vline(xintercept=7.5, linetype="dotted", col="#000000CC")
+    
 ## Comparing for pre-post 2007
 
 EngScotContro %T>% 
@@ -186,11 +243,11 @@ EngScotContro %T>%
   lm(Value ~ Time + England + Time*England + Cat2 + Trend2 + Cat2*England + Trend2*England, data=.) %>% 
   summary()
 
-## Comparing for thee stages, split at 1999 and 2007
+## Comparing for thee stages, split at 1999 and 2007 --------------------
 
 EngScotContro %T>% 
 {print(ggplot(., aes(Year, Value, group=interaction(Country, Cat1, Cat2), col=Country))+
-         geom_point() + geom_smooth(method="lm"))} %>% 
+         geom_point() + geom_smooth(method="lm", se=FALSE))} %>% 
   lm(Value ~ Time + 
        England + 
        Time*England + 
