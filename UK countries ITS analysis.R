@@ -494,6 +494,7 @@ EngScotContro %>%
 
 # modScotPI_99_07 - comparing Eng vs Scot with phase-in and two interventions --------------------------------
 
+
 lm(
   Value ~ Time +
     England +
@@ -506,7 +507,10 @@ lm(
     Trend2 +
     Cat2_Eng +
     Trend2_Eng,
-  data = {EngScotContro %>% filter(Year < 1999 | Year > 2000)}
+  data = {EngScotContro %>% 
+      filter(Year < 1999 | Year > 2000) %>% 
+      mutate(Trend1=ifelse(Cat1==0,0,Trend1-2),
+             Trend1_Eng=Trend1*England)}
 ) %>%
   assign("modScotPI_99_07", ., envir = .GlobalEnv) %T>%
   {print(ggplot(data=eval(.$call$data), aes(
@@ -535,7 +539,10 @@ modScotPI_99_07_null <- gls(
     Trend2 +
     Cat2_Eng +
     Trend2_Eng,
-  data = {EngScotContro %>% filter(Year < 1999 | Year > 2000)},
+  data = {EngScotContro %>% 
+      filter(Year < 1999 | Year > 2000) %>% 
+      mutate(Trend1=ifelse(Cat1==0,0,Trend1-2),
+             Trend1_Eng=Trend1*England)},
   correlation = NULL,
   method = "ML"
 )
@@ -546,10 +553,11 @@ confint(modScotPI_99_07_null)
 
 
 modScotPI_99_07_null_cfac <- EngScotContro[10:25, ] %>%
-  select(Time, England, Cat1, Cat2, Trend1, Trend2, Time_Eng) %>%
+  select(Time, England, Cat1, Cat2, Trend2, Time_Eng) %>%
   mutate(
+    Trend1 = c(1:16),
     Cat1_Eng = c(rep(0, 7), rep(1, 9)),
-    Trend1_Eng = c(rep(0, 7), 10:18),
+    Trend1_Eng = c(rep(0, 7), 8:16),
     Cat2_Eng = 0,
     Trend2_Eng = 0
   )
@@ -561,8 +569,10 @@ modScotPI_99_07_null_cfac <-
 ## Graphing final model
 
 EngScotContro %>%
-  filter(Year < 1999 | Year > 2000) %>%
-  mutate(predict = predict(modScotPI_99_07_null)) %>%
+  filter(Year < 1999 | Year > 2000)%>% 
+  mutate(Trend1=ifelse(Cat1==0,0,Trend1-2),
+         Trend1_Eng=Trend1*England,
+         predict = predict(modScotPI_99_07_null)) %>%
   ggplot(aes(
     Time,
     Value,
@@ -610,7 +620,6 @@ EngScotContro %>%
   xlab("Year") +
   coord_cartesian(ylim = c(0, 60)) +
   scale_y_continuous(expand = c(0, 0))
-
 
 # EngWalContro data setup - Eng vs Wales as control ----------------------------------------------------------
 
@@ -748,14 +757,19 @@ summary(modWal99_07_null)
 
 confint(modWal99_07_null)
 
-modWal99_07_null_cfac <- EngWalContro[8:25, ] %>%
-  select(Time, England, Cat1, Cat2, Trend1, Trend2, Time_Eng) %>%
-  mutate(
-    Cat1_Eng = c(rep(0, 9), rep(1, 9)),
-    Trend1_Eng = c(rep(0, 9), 10:18),
-    Cat2_Eng = 0,
-    Trend2_Eng = 0
-  )
+modWal99_07_null_cfac <- tibble(
+  Time = c(8:25),
+  England = 1,
+  Time_Eng = c(8:25),
+  Cat1 = 1,
+  Trend1 = c(1:18),
+  Cat2 = c(rep(0,9), rep(1,9)),
+  Trend2 = c(rep(0,9), 1:9),
+  Cat1_Eng = c(rep(0,9), rep(1,9)),
+  Trend1_Eng = c(rep(0,9), 10:18),
+  Cat2_Eng = 0,
+  Trend2_Eng = 0
+  )  # Remove _Eng interactions (retaining 1st intervention interactions for 2nd int)
 
 modWal99_07_null_cfac <-
   modWal99_07_null_cfac %>%
@@ -901,7 +915,10 @@ lm(
     Trend2 +
     Cat2_Eng +
     Trend2_Eng,
-  data = {EngWalContro %>% filter(Year < 1999 | Year > 2000)}
+  data = {EngWalContro %>% 
+      filter(Year < 1999 | Year > 2000) %>% 
+      mutate(Trend1=ifelse(Cat1==0,0,Trend1-2),
+             Trend1_Eng=Trend1*England)}
 ) %>%
   assign("modWalPI_99_07", ., envir = .GlobalEnv) %T>%
   {print(ggplot(data=eval(.$call$data), aes(
@@ -930,7 +947,10 @@ modWalPI_99_07_null <- gls(
     Trend2 +
     Cat2_Eng +
     Trend2_Eng,
-  data = {EngWalContro %>% filter(Year < 1999 | Year > 2000)},
+  data = {EngWalContro %>% 
+      filter(Year < 1999 | Year > 2000) %>% 
+      mutate(Trend1=ifelse(Cat1==0,0,Trend1-2),
+             Trend1_Eng=Trend1*England)},
   correlation = NULL,
   method = "ML"
 )
@@ -941,10 +961,11 @@ confint(modWalPI_99_07_null)
 
 
 modWalPI_99_07_null_cfac <- EngWalContro[10:25, ] %>%
-  select(Time, England, Cat1, Cat2, Trend1, Trend2, Time_Eng) %>%
+  select(Time, England, Cat1, Cat2, Trend2, Time_Eng) %>%
   mutate(
+    Trend1 = c(1:16),
     Cat1_Eng = c(rep(0, 7), rep(1, 9)),
-    Trend1_Eng = c(rep(0, 7), 10:18),
+    Trend1_Eng = c(rep(0, 7), 8:16),
     Cat2_Eng = 0,
     Trend2_Eng = 0
   )
@@ -957,7 +978,9 @@ modWalPI_99_07_null_cfac <-
 
 EngWalContro %>%
   filter(Year < 1999 | Year > 2000) %>%
-  mutate(predict = predict(modWalPI_99_07_null)) %>%
+  mutate(Trend1=ifelse(Cat1==0,0,Trend1-2),
+         Trend1_Eng=Trend1*England,
+         predict = predict(modWalPI_99_07_null)) %>%
   ggplot(aes(
     Time,
     Value,

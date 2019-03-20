@@ -1,4 +1,6 @@
+library(tidyverse)
 library(gganimate)
+library(readxl)
 
 # Import Scotland birth data ------------------------------------------------------------------------------
 
@@ -12,13 +14,15 @@ Scot.conc <-
     "Downloaded data files/ScotISD2018 report.xls",
     sheet = "Table1",
     range = "B33:P55",
-    col_names = FALSE
-  ) %>%
+    col_names = colnames(read_xls(
+      "Downloaded data files/ScotISD2018 report.xls",
+      sheet = "Table1",
+      range = "B5:P6", col_names = TRUE))) %>%
   select(
-    Year = '..1',
-    '<16' = '..11',
-    '<18' = '..13',
-    '<20' = '..15'
+    Year = 'Year of conception',
+    '<16' = '<16 1',
+    '<18' = '<18 2',
+    '<20' = '<20 3'
   )
 
 # Scotland births to estimate pregnancies pre-1994
@@ -30,16 +34,21 @@ Scot.births <-
     range = "AQ4:BW16",
     col_names = TRUE
   )[c(3:10, 12), ] %>%
-  select(Age = '..33', 1:32) %>%
+  select(Age = 'X__1', 1:32) %>%
    gather(Year, Births, -1) %>% 
    # mutate(Year=as.numeric(Year)
-  mutate_all(as.numeric) %>% 
-  mutate(YrP = Year-1,
-          AgP = Age-1)
+  mutate_all(as.numeric)
 
-Scot.births.est <-  Scot.births %>% 
-   mutate(Conceptions = (Births / 16 + 
-            Scot.births[(Scot.births$Year==YrP)&(Scot.births$Age==Age),'Births']*3/16))
+Scot.births$Conceptions <- sapply(1:nrow(Scot.births), function(x) {
+     year <- Scot.births$Year[x]
+     age <- Scot.births$Age[x]
+     total_conceptions <- sum(0.25 * 0.25 * Scot.births$Births[x],
+                              0.25 * 0.75 * Scot.births$Births[which(Scot.births$Age == age & Scot.births$Year == year + 1)],
+                              0.75 * 0.25 * Scot.births$Births[which(Scot.births$Age == age + 1 & Scot.births$Year == year)],
+                              0.75 * 0.75 * Scot.births$Births[which(Scot.births$Age == age + 1 & Scot.births$Year == year + 1)],
+                              na.rm = T)
+     return(total_conceptions)
+     })
  
  
 Scot.abort <- read_xlsx("Downloaded data files/mat_aas_table7.xlsx", skip=4) %>% 
