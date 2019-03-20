@@ -39,16 +39,15 @@ Scot.births <-
    # mutate(Year=as.numeric(Year)
   mutate_all(as.numeric)
 
-Scot.births$Conceptions <- sapply(1:nrow(Scot.births), function(x) {
-     year <- Scot.births$Year[x]
-     age <- Scot.births$Age[x]
-     total_conceptions <- sum(0.25 * 0.25 * Scot.births$Births[x],
-                              0.25 * 0.75 * Scot.births$Births[which(Scot.births$Age == age & Scot.births$Year == year + 1)],
-                              0.75 * 0.25 * Scot.births$Births[which(Scot.births$Age == age + 1 & Scot.births$Year == year)],
-                              0.75 * 0.75 * Scot.births$Births[which(Scot.births$Age == age + 1 & Scot.births$Year == year + 1)],
-                              na.rm = T)
-     return(total_conceptions)
-     })
+Scot.births <- Scot.births %>%
+  rowwise() %>% 
+  mutate(Conceptions = (function(year, age)
+  sum(0.25 * 0.25 * pull(Scot.births %>% filter(Age == age, Year == year) %>% select(Births)),
+      0.25 * 0.75 * pull(Scot.births %>% filter(Age == age, Year == year+1) %>% select(Births)),
+      0.75 * 0.25 * pull(Scot.births %>% filter(Age == age+1, Year == year) %>% select(Births)),
+      0.75 * 0.75 * pull(Scot.births %>% filter(Age == age+1, Year == year+1) %>% select(Births)),
+      na.rm = T)
+)(Year, Age))
  
  
 Scot.abort <- read_xlsx("Downloaded data files/mat_aas_table7.xlsx", skip=4) %>% 
