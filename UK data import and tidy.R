@@ -36,10 +36,7 @@ Scot.births <-
   )[c(3:10, 12), ] %>%
   select(Age = 'X__1', 1:32) %>%
    gather(Year, Births, -1) %>% 
-   # mutate(Year=as.numeric(Year)
-  mutate_all(as.numeric)
-
-Scot.births <- Scot.births %>%
+  mutate_all(as.numeric) %>%
   rowwise() %>% 
   mutate(Conceptions = (function(year, age)
   sum(0.25 * 0.25 * pull(Scot.births %>% filter(Age == age, Year == year) %>% select(Births)),
