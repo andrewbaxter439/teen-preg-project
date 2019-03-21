@@ -26,19 +26,81 @@ testAutocorr <- function(model, data=NULL, max.lag = 10, time.points = 25) {
 
 constructCIRibbon <- function(newdata, model) {
   newdata <- newdata %>%
-    mutate(Value = predict(model, newdata = newdata))
+    mutate(Predict = predict(model, newdata = newdata))
   mm <- model.matrix(as.formula(paste0("~ ", model$call$model[3])),
                      data = newdata)
   vars <- mm %*% vcov(model) %*% t(mm)
   sds <- sqrt(diag(vars))
-  newdata <- newdata %>% mutate(lowCI = Value - 1.96 * sds,
-                                HiCI = Value + 1.96 * sds)
+  newdata <- newdata %>% mutate(lowCI = Predict - 1.96 * sds,
+                                HiCI = Predict + 1.96 * sds)
 }
+
 
 # all.UK.rates - Import conception rates for GBR countries -------------------------------------------
 
 all.UK.rates <-
   read_xlsx("Conception rates by age and country.xlsx", sheet = "Under 18")
+
+
+# Create datasets --------------------------------------------------------------------------------------------
+
+
+#** EngData - England only -------------------------------------------------------------------------------------
+
+EngData <- all.UK.rates %>% filter(Country == "England") %>%
+  select(Country, '1992':'2016') %>%
+  gather("Year", "Value",-1) %>%
+  mutate(
+    Cat1 = ifelse(Year < 1999, 0, 1),
+    Cat2 = ifelse(Year <= 2007, 0, 1),
+    Year = as.numeric(Year),
+    Time = 1:nrow(.),
+    Trend1 = ifelse(Cat1 == 0, 0, 1:nrow(.) - nrow(filter(., Cat1 ==
+                                                            0))),
+    Trend2 = ifelse(Cat2 == 0, 0, 1:nrow(.) - nrow(filter(., Cat2 ==
+                                                            0)))
+  )
+
+#** EngScotContro data setup - Eng v Scot -----------------------------------------------
+
+EngScotContro <-
+  all.UK.rates %>% filter(Country == "Scotland" |
+                            Country == "England") %>%
+  gather("Year", "Value",-1) %>%
+  filter(Year > 1991,!is.na(Value)) %>%
+  arrange(Country) %>%
+  mutate(
+    England = ifelse(Country == "England", 1, 0),
+    Year = as.numeric(Year),
+    Time = Year - min(Year) + 1,
+    Cat1 = ifelse(Year < 1999, 0, 1),
+    Cat2 = ifelse(Year <= 2007, 0, 1),
+    Trend1 = ifelse(Cat1 == 0, 0, Year - 1998),
+    Trend2 = ifelse(Cat2 == 0, 0, Year - 2007)
+  ) %>%
+  mutate_at(., colnames(.)[5:9], list(Eng = ~ .*England))  # Potentially not necessary
+
+#** EngWalContro data setup - Eng vs Wales as control ----------------------------------------------------------
+
+EngWalContro <-
+  all.UK.rates %>% filter(Country == "Wales" |
+                            Country == "England") %>%
+  gather("Year", "Value",-1) %>%
+  filter(Year > 1991,!is.na(Value)) %>%
+  arrange(Country) %>%
+  mutate(
+    England = ifelse(Country == "England", 1, 0),
+    Year = as.numeric(Year),
+    Time = Year - min(Year) + 1,
+    Cat1 = ifelse(Year < 1999, 0, 1),
+    Cat2 = ifelse(Year <= 2007, 0, 1),
+    Trend1 = ifelse(Cat1 == 0, 0, Year - 1998),
+    Trend2 = ifelse(Cat2 == 0, 0, Year - 2007)
+  ) %>%
+  mutate_at(., colnames(.)[5:9], list(Eng = ~ .*England))  # Potentially not necessary
+
+# Visualise all UK rates -------------------------------------------------------------------------------------
+
 
 all.UK.rates %>% filter(Country == "Scotland" |
                           Country == "England" |
@@ -63,22 +125,8 @@ all.UK.rates %>% filter(Country == "Scotland" |
       geom_smooth(method = "lm")
   }
 
-
 # EngMod - England data in ITS with break at 1999 ------------------------------------------------------------
 
-EngData <- all.UK.rates %>% filter(Country == "England") %>%
-  select(Country, '1992':'2016') %>%
-  gather("Year", "Value",-1) %>%
-  mutate(
-    Cat1 = ifelse(Year < 1999, 0, 1),
-    Cat2 = ifelse(Year <= 2007, 0, 1),
-    Year = as.numeric(Year),
-    Time = 1:nrow(.),
-    Trend1 = ifelse(Cat1 == 0, 0, 1:nrow(.) - nrow(filter(., Cat1 ==
-                                                            0))),
-    Trend2 = ifelse(Cat2 == 0, 0, 1:nrow(.) - nrow(filter(., Cat2 ==
-                                                            0)))
-  )
 
 EngData %>% ggplot(aes(x = Year, y = Value, group = Cat1)) +
   geom_point() +
@@ -165,24 +213,6 @@ EngData %>%
              linetype = "dotted",
              col = "#000000CC")
 
-# EngScotContro data setup - Eng v Scot -----------------------------------------------
-
-EngScotContro <-
-  all.UK.rates %>% filter(Country == "Scotland" |
-                            Country == "England") %>%
-  gather("Year", "Value",-1) %>%
-  filter(Year > 1991,!is.na(Value)) %>%
-  arrange(Country) %>%
-  mutate(
-    England = ifelse(Country == "England", 1, 0),
-    Year = as.numeric(Year),
-    Time = Year - min(Year) + 1,
-    Cat1 = ifelse(Year < 1999, 0, 1),
-    Cat2 = ifelse(Year <= 2007, 0, 1),
-    Trend1 = ifelse(Cat1 == 0, 0, Year - 1998),
-    Trend2 = ifelse(Cat2 == 0, 0, Year - 2007)
-  ) %>%
-  mutate_at(., colnames(.)[5:9], list(Eng = ~ .*England))  # Potentially not necessary
 
 ## modScot99 - Comparing for pre-post 1999 --------------------------------------------
 
@@ -302,6 +332,8 @@ EngScotContro %>%
 
 ## modScot99_07 - Comparing for three stages, split at 1999 and 2007 --------------------
 
+#** Initial model -----
+
 lm(
   Value ~ Time +
     England +
@@ -329,6 +361,8 @@ lm(
 
 ## test autocorrelation
 testAutocorr(modScot99_07)  # Assume NULL for now
+
+#** New model -----
 
 modScot99_07_null <- gls(
   Value ~ Time +
@@ -364,51 +398,92 @@ modScot99_07_null_cfac <-
   modScot99_07_null_cfac %>%
   left_join(constructCIRibbon(modScot99_07_null_cfac, modScot99_07_null))
 
-## Graphing final model
+#** Graphing final model -----
 
 EngScotContro %>%
-  mutate(predict = predict(modScot99_07_null)) %>%
+  left_join(constructCIRibbon((filter(., England==1, Year>1998)), modScot99_07_null)) %>%  # England CI ribbon
+  mutate(Predict = predict(modScot99_07_null)) %>%  # Add Predicts for non-England
   ggplot(aes(
     Time,
     Value,
     col = Country,
+    fill = Country,
     group = interaction(Country, Cat1, Cat2)
   )) +
-  geom_point() +
-  geom_smooth(
-    # predicted values and 95% Confidence Interval
+  # Show all data points
+  geom_point(data=EngScotContro, show.legend = FALSE) +
+  # Counterfactual trend lines
+  geom_line(
     data = modScot99_07_null_cfac,
     aes(
       x = Time,
-      y = Value,
-      ymin = lowCI,
-      ymax = HiCI,
-      group = Cat2
+      y = Predict,
+      group = Cat2,
+      col = "Control",
+      fill = NULL
     ),
-    stat = 'identity',
     linetype = "longdash",
-    col = "#FC8D62",
-    fill = "#FC8D62",
     size = 1,
     inherit.aes = FALSE
   ) +
-  geom_line(aes(y = predict, linetype = Country), size = 1) +
-  scale_linetype_manual(values = c("solid", "dashed")) +
-  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
-                     labels = seq(1995, 2015, by = 5)) +
+  # Counterfactual confidence intervals (not shown in legend)
+  geom_ribbon(
+    data=modScot99_07_null_cfac,
+    aes(
+      x=Time,
+      ymin = lowCI,
+      ymax=HiCI,
+      group = Cat2,
+      col=NULL,
+      fill="Control"
+    ),
+    alpha=0.5,
+    size = 1,
+    show.legend = FALSE,
+    inherit.aes = FALSE) +
+  # Model trend lines
+  geom_line(aes(y=Predict), size = 1) +
+  # Confidence intervals (not shown in legend)
+  geom_ribbon(
+    aes(
+      x=Time,
+      ymin = lowCI,
+      ymax=HiCI,
+      col=NULL,
+      fill=Country
+    ),
+    alpha=0.5,
+    size = 1,
+    show.legend = FALSE) +
+  # Intervention time points
   geom_vline(xintercept = 7.5,
              linetype = "dotted",
              col = "#000000CC") +
   geom_vline(xintercept = 16.5,
              linetype = "dotted",
              col = "#000000CC") +
-  theme(panel.background = element_blank()) +
+  # Display parameters
+  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
+                     labels = seq(1995, 2015, by = 5)) +
+  theme(panel.background = element_blank(),
+        legend.key  = element_blank()) +
   ylab("Rate of pregnancies to under-18s, per 1,000") +
   xlab("Year") +
-  coord_cartesian(ylim = c(0, 50)) +
-  scale_y_continuous(expand = c(0, 0))
+  coord_cartesian(ylim = c(0, 60)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_colour_manual(
+    breaks = c("England", "Wales", "Scotland", "Control"),
+    values = c("Wales" = "#00AB39",
+               "Scotland" = "#0072C6",
+               "England" = "#CF142B",
+               "Control" = "#F7D917"),
+    aesthetics = c("colour", "fill"))
+
+ggsave("graphs/Scot99_07.png")
 
 # modScotPI - Comparing pre-1999 and post-2007, proposing phase-in -------------------------------------------
+
+#** Initial model -----
 
 lm(Value ~ Time + England + Time_Eng + Cat2 + Trend2 + Cat2_Eng + Trend2_Eng,
    data = {EngScotContro %>% filter(Year < 1999 | Year > 2007)}) %>%
@@ -423,6 +498,8 @@ lm(Value ~ Time + England + Time_Eng + Cat2 + Trend2 + Cat2_Eng + Trend2_Eng,
   summary()
 
 testAutocorr(modScotPI, max.lag=14, time.points = 16)  # Possibly no autocorrelation? Sig at PACF 12 and 13
+
+#** New model -----
 
 modScotPI_null <-
   gls(
@@ -449,34 +526,61 @@ modScotPI_null_cfac <-
   modScotPI_null_cfac %>%
   left_join(constructCIRibbon(modScotPI_null_cfac, modScotPI_null))
 
+#** Graphing final model -----
+
 EngScotContro %>%
   filter(Year < 1999 | Year > 2007) %>%
-  mutate(predict = predict(modScotPI_null)) %>%
+  left_join(constructCIRibbon((filter(., England==1, Year>2007)), modScotPI_null)) %>%  # England CI ribbon
+  mutate(Predict = predict(modScotPI_null)) %>%
   ggplot(aes(Time, Value, col = Country, group = interaction(Country, Cat2))) +
-  geom_point(data = EngScotContro) +
-  geom_smooth(
-    # predicted values and 95% Confidence Interval
+  # Show all data points
+  geom_point(data=EngScotContro, show.legend = FALSE) +
+  # Counterfactual trend lines
+  geom_line(
     data = modScotPI_null_cfac,
     aes(
       x = Time,
-      y = Value,
-      ymin = lowCI,
-      ymax = HiCI
+      y = Predict,
+      col = "Control",
+      fill = NULL
     ),
-    stat = 'identity',
-    linetype = "dashed",
-    col = "#FC8D62",
-    fill = "#FC8D62",
+    linetype = "longdash",
     size = 1,
     inherit.aes = FALSE
   ) +
-  geom_line(aes(y = predict), size = 1) +
-  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
-                     labels = seq(1995, 2015, by = 5)) +
+  # Counterfactual confidence intervals (not shown in legend)
+  geom_ribbon(
+    data=modScotPI_null_cfac,
+    aes(
+      x=Time,
+      ymin = lowCI,
+      ymax=HiCI,
+      col=NULL,
+      fill="Control"
+    ),
+    alpha=0.5,
+    size = 1,
+    show.legend = FALSE,
+    inherit.aes = FALSE) +
+  # Model trend lines
+  geom_line(aes(y=Predict), size = 1) +
+  # Confidence intervals (not shown in legend)
+  geom_ribbon(
+    aes(
+      x=Time,
+      ymin = lowCI,
+      ymax=HiCI,
+      col=NULL,
+      fill=Country
+    ),
+    alpha=0.5,
+    size = 1,
+    show.legend = FALSE) +
+  # Intervention time points
   geom_vline(xintercept = 7.5,
              linetype = "dotted",
              col = "#000000CC") +
-  theme(panel.background = element_blank()) +
+  # Phase-in period greyed out
   geom_rect(
     xmin = 7.5,
     xmax = 16.5,
@@ -486,14 +590,28 @@ EngScotContro %>%
     alpha = 0.01,
     inherit.aes = FALSE
   ) +
+  # Display parameters
+  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
+                     labels = seq(1995, 2015, by = 5)) +
+  theme(panel.background = element_blank(),
+        legend.key  = element_blank()) +
   ylab("Rate of pregnancies to under-18s, per 1,000") +
   xlab("Year") +
-  coord_cartesian(ylim = c(0, 50)) +
-  scale_y_continuous(expand = c(0, 0))
+  coord_cartesian(ylim = c(0, 60)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_colour_manual(
+    breaks = c("England", "Wales", "Scotland", "Control"),
+    values = c("Wales" = "#00AB39",
+               "Scotland" = "#0072C6",
+               "England" = "#CF142B",
+               "Control" = "#F7D917"),
+    aesthetics = c("colour", "fill"))
 
+ggsave("graphs/Scot_99_07.png")
 
 # modScotPI_99_07 - comparing Eng vs Scot with phase-in and two interventions --------------------------------
 
+#** Initial model -----
 
 lm(
   Value ~ Time +
@@ -526,7 +644,7 @@ lm(
 ## test autocorrelation
 testAutocorr(modScotPI_99_07, time.points = 23)  # Assume NULL for now
 
-## new model
+#** New model -----
 modScotPI_99_07_null <- gls(
   Value ~ Time +
     England +
@@ -566,46 +684,74 @@ modScotPI_99_07_null_cfac <-
   modScotPI_99_07_null_cfac %>%
   left_join(constructCIRibbon(modScotPI_99_07_null_cfac, modScotPI_99_07_null))
 
-## Graphing final model
+#** Graphing final model -----
 
 EngScotContro %>%
-  filter(Year < 1999 | Year > 2000)%>% 
+  filter(Year < 1999 | Year > 2000) %>%
   mutate(Trend1=ifelse(Cat1==0,0,Trend1-2),
-         Trend1_Eng=Trend1*England,
-         predict = predict(modScotPI_99_07_null)) %>%
+         Trend1_Eng=Trend1*England) %>% 
+  left_join(constructCIRibbon((filter(., England==1, Year>2000)), modScotPI_99_07_null)) %>%  # England CI ribbon
+  mutate(Predict = predict(modScotPI_99_07_null)) %>%  # Add Predicts for non-England
   ggplot(aes(
     Time,
     Value,
     col = Country,
+    fill=Country,
     group = interaction(Country, Cat1, Cat2)
   )) +
-  geom_point(data=EngScotContro) +
-  geom_smooth(
-    # predicted values and 95% Confidence Interval
+  # Show all data points
+  geom_point(data=EngScotContro, show.legend = FALSE) +
+  # Counterfactual trend lines
+  geom_line(
     data = modScotPI_99_07_null_cfac,
     aes(
       x = Time,
-      y = Value,
-      ymin = lowCI,
-      ymax = HiCI,
-      group = Cat2
+      y = Predict,
+      group = Cat2,
+      col = "Control",
+      fill = NULL
     ),
-    stat = 'identity',
     linetype = "longdash",
-    col = "#FC8D62",
-    fill = "#FC8D62",
     size = 1,
     inherit.aes = FALSE
   ) +
-  geom_line(aes(y = predict), size = 1) +
-  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
-                     labels = seq(1995, 2015, by = 5)) +
+  # Counterfactual confidence intervals (not shown in legend)
+  geom_ribbon(
+    data=modScotPI_99_07_null_cfac,
+    aes(
+      x=Time,
+      ymin = lowCI,
+      ymax=HiCI,
+      group = Cat2,
+      col=NULL,
+      fill="Control"
+    ),
+    alpha=0.5,
+    size = 1,
+    show.legend = FALSE,
+    inherit.aes = FALSE) +
+  # Model trend lines
+  geom_line(aes(y=Predict), size = 1) +
+  # Confidence intervals (not shown in legend)
+  geom_ribbon(
+    aes(
+      x=Time,
+      ymin = lowCI,
+      ymax=HiCI,
+      col=NULL,
+      fill=Country
+    ),
+    alpha=0.5,
+    size = 1,
+    show.legend = FALSE) +
+  # Intervention time points
   geom_vline(xintercept = 7.5,
              linetype = "dotted",
              col = "#000000CC") +
   geom_vline(xintercept = 16.5,
              linetype = "dotted",
              col = "#000000CC") +
+  # Phase-in period greyed out
   geom_rect(
     xmin = 7.5,
     xmax = 9.5,
@@ -615,30 +761,24 @@ EngScotContro %>%
     alpha = 0.01,
     inherit.aes = FALSE
   ) +
-  theme(panel.background = element_blank()) +
+  # Display parameters
+  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
+                     labels = seq(1995, 2015, by = 5)) +
+  theme(panel.background = element_blank(),
+        legend.key  = element_blank()) +
   ylab("Rate of pregnancies to under-18s, per 1,000") +
   xlab("Year") +
   coord_cartesian(ylim = c(0, 60)) +
-  scale_y_continuous(expand = c(0, 0))
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_colour_manual(
+    breaks = c("England", "Wales", "Scotland", "Control"),
+    values = c("Wales" = "#00AB39",
+               "Scotland" = "#0072C6",
+               "England" = "#CF142B",
+               "Control" = "#F7D917"),
+    aesthetics = c("colour", "fill"))
 
-# EngWalContro data setup - Eng vs Wales as control ----------------------------------------------------------
-
-EngWalContro <-
-  all.UK.rates %>% filter(Country == "Wales" |
-                            Country == "England") %>%
-  gather("Year", "Value",-1) %>%
-  filter(Year > 1991,!is.na(Value)) %>%
-  arrange(Country) %>%
-  mutate(
-    England = ifelse(Country == "England", 1, 0),
-    Year = as.numeric(Year),
-    Time = Year - min(Year) + 1,
-    Cat1 = ifelse(Year < 1999, 0, 1),
-    Cat2 = ifelse(Year <= 2007, 0, 1),
-    Trend1 = ifelse(Cat1 == 0, 0, Year - 1998),
-    Trend2 = ifelse(Cat2 == 0, 0, Year - 2007)
-  ) %>%
-  mutate_at(., colnames(.)[5:9], list(Eng = ~ .*England))  # Potentially not necessary
+ggsave("graphs/ScotPI_99_07.png")
 
 # modWal99 - Comparing for changes pre-post 1999 -------------------------------------------------------------
 
@@ -707,6 +847,8 @@ EngWalContro %>%
 
 # modWal99_07 - Comparing for changes at 1999 and 2007 -------------------------------------------------------
 
+#** Initial model -----
+
 lm(
   Value ~ Time +
     England +
@@ -735,7 +877,8 @@ lm(
 ## test autocorrelation
 testAutocorr(modWal99_07)  # Assume NULL for now
 
-## new model
+#** New model -----
+
 modWal99_07_null <- gls(
   Value ~ Time +
     England +
@@ -775,50 +918,92 @@ modWal99_07_null_cfac <-
   modWal99_07_null_cfac %>%
   left_join(constructCIRibbon(modWal99_07_null_cfac, modWal99_07_null))
 
-## Graphing final model
+#** Graphing final model -----
 
 EngWalContro %>%
-  mutate(predict = predict(modWal99_07_null)) %>%
+  left_join(constructCIRibbon((filter(., England==1, Year>1998)), modWal99_07_null)) %>%  # England CI ribbon
+  mutate(Predict = predict(modWal99_07_null)) %>%  # Add Predicts for non-England
   ggplot(aes(
     Time,
     Value,
     col = Country,
+    fill = Country,
     group = interaction(Country, Cat1, Cat2)
   )) +
-  geom_point() +
-  geom_smooth(
-    # predicted values and 95% Confidence Interval
+  # Show all data points
+  geom_point(data=EngWalContro, show.legend = FALSE) +
+  # Counterfactual trend lines
+  geom_line(
     data = modWal99_07_null_cfac,
     aes(
       x = Time,
-      y = Value,
-      ymin = lowCI,
-      ymax = HiCI,
-      group = Cat2
+      y = Predict,
+      group = Cat2,
+      col = "Control",
+      fill = NULL
     ),
-    stat = 'identity',
     linetype = "longdash",
-    col = "#FC8D62",
-    fill = "#FC8D62",
     size = 1,
     inherit.aes = FALSE
   ) +
-  geom_line(aes(y = predict), size = 1) +
-  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
-                     labels = seq(1995, 2015, by = 5)) +
+  # Counterfactual confidence intervals (not shown in legend)
+  geom_ribbon(
+    data=modWal99_07_null_cfac,
+    aes(
+      x=Time,
+      ymin = lowCI,
+      ymax=HiCI,
+      group = Cat2,
+      col=NULL,
+      fill="Control"
+    ),
+    alpha=0.5,
+    size = 1,
+    show.legend = FALSE,
+    inherit.aes = FALSE) +
+  # Model trend lines
+  geom_line(aes(y=Predict), size = 1) +
+  # Confidence intervals (not shown in legend)
+  geom_ribbon(
+    aes(
+      x=Time,
+      ymin = lowCI,
+      ymax=HiCI,
+      col=NULL,
+      fill=Country
+    ),
+    alpha=0.5,
+    size = 1,
+    show.legend = FALSE) +
+  # Intervention time points
   geom_vline(xintercept = 7.5,
              linetype = "dotted",
              col = "#000000CC") +
   geom_vline(xintercept = 16.5,
              linetype = "dotted",
              col = "#000000CC") +
-  theme(panel.background = element_blank()) +
+  # Display parameters
+  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
+                     labels = seq(1995, 2015, by = 5)) +
+  theme(panel.background = element_blank(),
+        legend.key  = element_blank()) +
   ylab("Rate of pregnancies to under-18s, per 1,000") +
   xlab("Year") +
   coord_cartesian(ylim = c(0, 60)) +
-  scale_y_continuous(expand = c(0, 0))
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_colour_manual(
+    breaks = c("England", "Wales", "Scotland", "Control"),
+    values = c("Wales" = "#00AB39",
+               "Scotland" = "#0072C6",
+               "England" = "#CF142B",
+               "Control" = "#F7D917"),
+    aesthetics = c("colour", "fill"))
+
+ggsave("graphs/Wal99_07.png")
 
 # modWalPI - Comparing pre-1999 and post 2007 (assuming phase-in) --------------------------------------------
+
+#** Initial model -----
 
 lm(Value ~ Time + England + Time_Eng + Cat2 + Trend2 + Cat2_Eng + Trend2_Eng,
    data = {EngWalContro %>% filter(Year < 1999 | Year > 2007)}) %>%
@@ -833,6 +1018,8 @@ lm(Value ~ Time + England + Time_Eng + Cat2 + Trend2 + Cat2_Eng + Trend2_Eng,
   summary()
 
 testAutocorr(modWalPI, max.lag=14, time.points = 16)  # Possibly no autocorrelation? Sig at PACF 12 and 13
+
+#** New model -----
 
 modWalPI_null <-
   gls(
@@ -859,34 +1046,61 @@ modWalPI_null_cfac <-
   modWalPI_null_cfac %>%
   left_join(constructCIRibbon(modWalPI_null_cfac, modWalPI_null))
 
+#** Graphing final model -----
+
 EngWalContro %>%
   filter(Year < 1999 | Year > 2007) %>%
-  mutate(predict = predict(modWalPI_null)) %>%
+  left_join(constructCIRibbon((filter(., England==1, Year>2007)), modWalPI_null)) %>%  # England CI ribbon
+  mutate(Predict = predict(modWalPI_null)) %>%
   ggplot(aes(Time, Value, col = Country, group = interaction(Country, Cat2))) +
-  geom_point(data = EngWalContro) +
-  geom_smooth(
-    # predicted values and 95% Confidence Interval
+  # Show all data points
+  geom_point(data=EngWalContro, show.legend = FALSE) +
+  # Counterfactual trend lines
+  geom_line(
     data = modWalPI_null_cfac,
     aes(
       x = Time,
-      y = Value,
-      ymin = lowCI,
-      ymax = HiCI
+      y = Predict,
+      col = "Control",
+      fill = NULL
     ),
-    stat = 'identity',
-    linetype = "dashed",
-    col = "#FC8D62",
-    fill = "#FC8D62",
+    linetype = "longdash",
     size = 1,
     inherit.aes = FALSE
   ) +
-  geom_line(aes(y = predict), size = 1) +
-  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
-                     labels = seq(1995, 2015, by = 5)) +
+  # Counterfactual confidence intervals (not shown in legend)
+  geom_ribbon(
+    data=modWalPI_null_cfac,
+    aes(
+      x=Time,
+      ymin = lowCI,
+      ymax=HiCI,
+      col=NULL,
+      fill="Control"
+    ),
+    alpha=0.5,
+    size = 1,
+    show.legend = FALSE,
+    inherit.aes = FALSE) +
+  # Model trend lines
+  geom_line(aes(y=Predict), size = 1) +
+  # Confidence intervals (not shown in legend)
+  geom_ribbon(
+    aes(
+      x=Time,
+      ymin = lowCI,
+      ymax=HiCI,
+      col=NULL,
+      fill=Country
+    ),
+    alpha=0.5,
+    size = 1,
+    show.legend = FALSE) +
+  # Intervention time points
   geom_vline(xintercept = 7.5,
              linetype = "dotted",
              col = "#000000CC") +
-  theme(panel.background = element_blank()) +
+  # Phase-in period greyed out
   geom_rect(
     xmin = 7.5,
     xmax = 16.5,
@@ -896,12 +1110,28 @@ EngWalContro %>%
     alpha = 0.01,
     inherit.aes = FALSE
   ) +
+  # Display parameters
+  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
+                     labels = seq(1995, 2015, by = 5)) +
+  theme(panel.background = element_blank(),
+        legend.key  = element_blank()) +
   ylab("Rate of pregnancies to under-18s, per 1,000") +
   xlab("Year") +
   coord_cartesian(ylim = c(0, 60)) +
-  scale_y_continuous(expand = c(0, 0))
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_colour_manual(
+    breaks = c("England", "Wales", "Scotland", "Control"),
+    values = c("Wales" = "#00AB39",
+               "Scotland" = "#0072C6",
+               "England" = "#CF142B",
+               "Control" = "#F7D917"),
+    aesthetics = c("colour", "fill"))
+
+ggsave("graphs/WalPI.png")
 
 # modWalPI_99_07 - comparing Eng vs Wal with phase-in period and two interventions ---------------------------
+
+#** Initial model -----
 
 lm(
   Value ~ Time +
@@ -934,7 +1164,8 @@ lm(
 ## test autocorrelation
 testAutocorr(modWalPI_99_07, time.points = 23)  # Assume NULL for now
 
-## new model
+#** New model -----
+
 modWalPI_99_07_null <- gls(
   Value ~ Time +
     England +
@@ -974,46 +1205,74 @@ modWalPI_99_07_null_cfac <-
   modWalPI_99_07_null_cfac %>%
   left_join(constructCIRibbon(modWalPI_99_07_null_cfac, modWalPI_99_07_null))
 
-## Graphing final model
+#** Graphing final model -----
 
 EngWalContro %>%
   filter(Year < 1999 | Year > 2000) %>%
   mutate(Trend1=ifelse(Cat1==0,0,Trend1-2),
-         Trend1_Eng=Trend1*England,
-         predict = predict(modWalPI_99_07_null)) %>%
+         Trend1_Eng=Trend1*England) %>% 
+  left_join(constructCIRibbon((filter(., England==1, Year>2000)), modWalPI_99_07_null)) %>%  # England CI ribbon
+  mutate(Predict = predict(modWalPI_99_07_null)) %>%  # Add Predicts for non-England
   ggplot(aes(
     Time,
     Value,
     col = Country,
+    fill=Country,
     group = interaction(Country, Cat1, Cat2)
   )) +
-  geom_point(data=EngWalContro) +
-  geom_smooth(
-    # predicted values and 95% Confidence Interval
+  # Show all data points
+  geom_point(data=EngWalContro, show.legend = FALSE) +
+  # Counterfactual trend lines
+  geom_line(
     data = modWalPI_99_07_null_cfac,
     aes(
       x = Time,
-      y = Value,
-      ymin = lowCI,
-      ymax = HiCI,
-      group = Cat2
+      y = Predict,
+      group = Cat2,
+      col = "Control",
+      fill = NULL
     ),
-    stat = 'identity',
     linetype = "longdash",
-    col = "#FC8D62",
-    fill = "#FC8D62",
     size = 1,
     inherit.aes = FALSE
   ) +
-  geom_line(aes(y = predict), size = 1) +
-  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
-                     labels = seq(1995, 2015, by = 5)) +
+  # Counterfactual confidence intervals (not shown in legend)
+  geom_ribbon(
+    data=modWalPI_99_07_null_cfac,
+    aes(
+      x=Time,
+      ymin = lowCI,
+      ymax=HiCI,
+      group = Cat2,
+      col=NULL,
+      fill="Control"
+    ),
+    alpha=0.5,
+    size = 1,
+    show.legend = FALSE,
+    inherit.aes = FALSE) +
+  # Model trend lines
+  geom_line(aes(y=Predict), size = 1) +
+  # Confidence intervals (not shown in legend)
+  geom_ribbon(
+    aes(
+      x=Time,
+      ymin = lowCI,
+      ymax=HiCI,
+      col=NULL,
+      fill=Country
+    ),
+    alpha=0.5,
+    size = 1,
+    show.legend = FALSE) +
+  # Intervention time points
   geom_vline(xintercept = 7.5,
              linetype = "dotted",
              col = "#000000CC") +
   geom_vline(xintercept = 16.5,
              linetype = "dotted",
              col = "#000000CC") +
+  # Phase-in period greyed out
   geom_rect(
     xmin = 7.5,
     xmax = 9.5,
@@ -1023,8 +1282,21 @@ EngWalContro %>%
     alpha = 0.01,
     inherit.aes = FALSE
   ) +
-  theme(panel.background = element_blank()) +
+  # Display parameters
+  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
+                     labels = seq(1995, 2015, by = 5)) +
+  theme(panel.background = element_blank(),
+        legend.key  = element_blank()) +
   ylab("Rate of pregnancies to under-18s, per 1,000") +
   xlab("Year") +
   coord_cartesian(ylim = c(0, 60)) +
-  scale_y_continuous(expand = c(0, 0))
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_colour_manual(
+    breaks = c("England", "Wales", "Scotland", "Control"),
+    values = c("Wales" = "#00AB39",
+               "Scotland" = "#0072C6",
+               "England" = "#CF142B",
+               "Control" = "#F7D917"),
+    aesthetics = c("colour", "fill"))
+
+ggsave("graphs/WalPI_99_07.png")

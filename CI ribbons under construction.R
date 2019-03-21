@@ -86,7 +86,7 @@ modWalPI_99_07_null_cfac <-
 EngWalContro %>%
   filter(Year < 1999 | Year > 2000) %>%
   mutate(Trend1=ifelse(Cat1==0,0,Trend1-2),
-         Trend1_Eng=Trend1*England,) %>% 
+         Trend1_Eng=Trend1*England) %>% 
   left_join(constructCIRibbon((filter(., England==1, Year>2000)), modWalPI_99_07_null)) %>% 
   mutate(Predict = predict(modWalPI_99_07_null)) %>%
   ggplot(aes(
@@ -96,42 +96,59 @@ EngWalContro %>%
     fill=Country,
     group = interaction(Country, Cat1, Cat2)
   )) +
+  # Show all data points
   geom_point(data=EngWalContro, show.legend = FALSE) +
-  geom_smooth(
-    # predicted values and 95% Confidence Interval
+  # Counterfactual trend lines
+  geom_line(
     data = modWalPI_99_07_null_cfac,
     aes(
       x = Time,
       y = Predict,
-      ymin = lowCI,
-      ymax = HiCI,
-      group = Cat2
+      group = Cat2,
+      col = "Control",
+      fill = NULL
     ),
-    stat = 'identity',
     linetype = "longdash",
     size = 1,
-    inherit.aes = TRUE
+    inherit.aes = FALSE
   ) +
-  geom_smooth(
+  # Counterfactual confidence intervals (not shown in legend)
+  geom_ribbon(
+    data=modWalPI_99_07_null_cfac,
     aes(
       x=Time,
-      y = Predict,
       ymin = lowCI,
       ymax=HiCI,
+      group = Cat2,
+      col=NULL,
       fill=Country
-),
-    stat='identity',
+      ),
+    alpha=0.5,
     size = 1,
-show.legend = FALSE) +
-  geom_line(aes(y=Predict), size = 1)+
-  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
-                     labels = seq(1995, 2015, by = 5)) +
+    show.legend = FALSE,
+    inherit.aes = FALSE) +
+  # Confidence intervals (not shown in legend)
+  geom_ribbon(
+    aes(
+      x=Time,
+      ymin = lowCI,
+      ymax=HiCI,
+      col=NULL,
+      fill=Country
+      ),
+    alpha=0.5,
+    size = 1,
+    show.legend = FALSE) +
+  # Model trend lines
+  geom_line(aes(y=Predict), size = 1) +
+  # Intervention time points
   geom_vline(xintercept = 7.5,
              linetype = "dotted",
              col = "#000000CC") +
   geom_vline(xintercept = 16.5,
              linetype = "dotted",
              col = "#000000CC") +
+  # Phase-in period greyed out
   geom_rect(
     xmin = 7.5,
     xmax = 9.5,
@@ -141,10 +158,18 @@ show.legend = FALSE) +
     alpha = 0.01,
     inherit.aes = FALSE
   ) +
+  # Display parameters
+  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
+                     labels = seq(1995, 2015, by = 5)) +
   theme(panel.background = element_blank(),
         legend.key  = element_blank()) +
   ylab("Rate of pregnancies to under-18s, per 1,000") +
   xlab("Year") +
   coord_cartesian(ylim = c(0, 60)) +
-  scale_y_continuous(expand = c(0, 0))
-#  scale_colour_manual(breaks = c("Wales", "England", "Control"), values = c("red","green", "#000000CC"))
+  scale_y_continuous(expand = c(0, 0)) +
+  scale_colour_manual(
+    values = c("Wales" = "#00AB39",
+               "Scotland" = "F7D917",
+               "England" = "#CF142B",
+               "Control" = "#F7D917"),
+    aesthetics = c("colour", "fill"))
