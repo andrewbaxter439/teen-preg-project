@@ -1,3 +1,15 @@
+---
+title: "Initial ITS models"
+output:
+  word_document:
+    reference_docx: ITS_template.docx
+    fig_width: 8
+    fig_height: 6
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
 library(tidyverse)
 library(readxl)
 library(broom)
@@ -6,6 +18,7 @@ library(car)
 
 testAutocorr <- function(model, data=NULL, max.lag = 10, time.points = 25) {
   data <- eval(model$call$data)  # Only works if 'lm' call has dataframe named in bracket
+  print("Durbin Watson Test")
   print(dwt(model, max.lag = max.lag, alternative = "two.sided"))
   par(cex = 0.7, mai = c(0.1, 0.1, 0.2, 0.1))
   par(fig = c(0.03, 1, 0.8, 1))
@@ -14,7 +27,8 @@ testAutocorr <- function(model, data=NULL, max.lag = 10, time.points = 25) {
     residuals(model)[1:time.points],
     type = 'o',
     pch = 16,
-    col = "red"
+    col = "red",
+    main = "Plotting residuals by time, with Autocorrelation and Partial-autocorrelation plots"
   )
   
   par(fig = c(0.03, 0.5, 0.05, 0.75), new = TRUE)
@@ -34,18 +48,17 @@ constructCIRibbon <- function(newdata, model) {
   newdata <- newdata %>% mutate(lowCI = Predict - 1.96 * sds,
                                 HiCI = Predict + 1.96 * sds)
 }
+```
+# Importing and setting up data
 
+Conceptions to under-18s were extracted from the dataset and coded into three datasets:
 
-# all.UK.rates - Import conception rates for GBR countries -------------------------------------------
-
+```{r include=FALSE}
 all.UK.rates <-
   read_xlsx("Conception rates by age and country.xlsx", sheet = "Under 18")
-
-
-# Create datasets --------------------------------------------------------------------------------------------
-
-
-#** EngData - England only -------------------------------------------------------------------------------------
+```
+### EngData - England only
+```{r echo=FALSE}
 
 EngData <- all.UK.rates %>% filter(Country == "England") %>%
   select(Country, '1992':'2016') %>%
@@ -55,14 +68,15 @@ EngData <- all.UK.rates %>% filter(Country == "England") %>%
     Cat2 = ifelse(Year <= 2007, 0, 1),
     Year = as.numeric(Year),
     Time = 1:nrow(.),
-    Trend1 = ifelse(Cat1 == 0, 0, 1:nrow(.) - nrow(filter(., Cat1 ==
-                                                            0))),
-    Trend2 = ifelse(Cat2 == 0, 0, 1:nrow(.) - nrow(filter(., Cat2 ==
-                                                            0)))
+    Trend1 = ifelse(Cat1 == 0, 0, Year - 1998),
+    Trend2 = ifelse(Cat2 == 0, 0, Year - 2007)
   )
 
-#** EngScotContro data setup - Eng v Scot -----------------------------------------------
+head(EngData)
+```
 
+### EngScotContro data setup - Eng v Scotland as control
+```{r echo=FALSE}
 EngScotContro <-
   all.UK.rates %>% filter(Country == "Scotland" |
                             Country == "England") %>%
@@ -78,10 +92,13 @@ EngScotContro <-
     Trend1 = ifelse(Cat1 == 0, 0, Year - 1998),
     Trend2 = ifelse(Cat2 == 0, 0, Year - 2007)
   ) %>%
-  mutate_at(., colnames(.)[5:9], list(Eng = ~ .*England))  # Potentially not necessary
+  mutate_at(., colnames(.)[5:9], list(Eng = ~ .*England))
 
-#** EngWalContro data setup - Eng vs Wales as control ----------------------------------------------------------
+head(arrange(EngScotContro, Year), 10)
+```
 
+### EngWalContro data setup - Eng vs Wales as control
+```{r echo=FALSE}
 EngWalContro <-
   all.UK.rates %>% filter(Country == "Wales" |
                             Country == "England") %>%
@@ -97,85 +114,53 @@ EngWalContro <-
     Trend1 = ifelse(Cat1 == 0, 0, Year - 1998),
     Trend2 = ifelse(Cat2 == 0, 0, Year - 2007)
   ) %>%
-  mutate_at(., colnames(.)[5:9], list(Eng = ~ .*England))  # Potentially not necessary
+  mutate_at(., colnames(.)[5:9], list(Eng = ~ .*England))
 
-# Visualise all UK rates -------------------------------------------------------------------------------------
+head(arrange(EngWalContro, Year), 10)
+```
 
+# Initial exploratory models of England-only data
 
-all.UK.rates %>% filter(Country == "Scotland" |
-                          Country == "England" |
-                          Country == "Wales") %>%
-  gather("Year", "Value",-1) %>%
-  mutate(Category = ifelse(Year < 1999, 0,
-                           ifelse(Year < 2007, 1, 2)),
-         Year = as.numeric(Year)) %>%
-  group_by(Country, Category) %T>%
-  {
-    print(group_map(., ~ tidy(lm(Value ~ Year, data = .))) %>%
-            arrange(Category, term, Country))
-  } %>%
-  {
-    ggplot(., aes(
-      x = Year,
-      y = Value,
-      group = interaction(Category, Country),
-      col = Country
-    )) +
-      geom_point() +
-      geom_smooth(method = "lm")
-  }
+I first constructed a model with a single intervention at 1999 to test England data:
 
-# EngMod - England data in ITS with break at 1999 ------------------------------------------------------------
-
-
+```{r echo=FALSE}
 EngData %>% ggplot(aes(x = Year, y = Value, group = Cat1)) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE)
-
+```
+```{r}
 EngMod <- lm(Value ~ Time + Cat1 + Trend1, data = EngData)
 summary(EngMod)$coefficients
+```
 
-# Test for autocorrelation
+A visual inspection of the model and a test for autocorrelation raise concerns about this model:
 
+```{r echo=FALSE}
 testAutocorr(EngMod, max.lag = 15)
+```
 
+# Adding second intervention to England model
 
-# EngMod2 - proposing new effect at Y=2007 -------------------------------------------------------------------
+A second intervention at 2007 makes a better-fit model. This corresponds with a reevaluation and adaptation of the model after 2005 or potentially a phase-in period:
 
-EngData %>% ggplot(aes(
-  x = Year,
-  y = Value,
-  group = interaction(Cat1, Cat2)
-)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-
+``` {r echo=FALSE}
 EngMod2 <-
   lm(Value ~ Time + Cat1 + Trend1 + Cat2 + Trend2, data = EngData)
-summary(EngMod2)
 
 ## Test for autocorrelation
 
 testAutocorr(EngMod2, max.lag = 15)  # Potential MA3?
-
+```
+```{r}
 EngMod2_q3 <- gls(
   Value ~ Time + Cat1 + Trend1 + Cat2 + Trend2,
   data = EngData,
   correlation = corARMA(q = 3, form =  ~ Time),
   method = "ML"
 )
-summary(EngMod2_q3)
-coef(EngMod2_q3)
-
-EngMod2_q3 %>% update(correlation = corARMA(q = 4, form =  ~ Time)) %>%
-  anova(EngMod2_q3)
-
-EngMod2_q3 %>% update(correlation = NULL) %>%
-  anova(EngMod2_q3)
-
-EngMod2_q3 %>% update(correlation = corARMA(q = 3, p = 1, form =  ~ Time)) %>%
-  anova(EngMod2_q3)  # Significantly different
-
+summary(EngMod2_q3)$tTable
+```
+```{r echo=FALSE, message=FALSE}
 EM2q3_co <- EngMod2_q3$coefficients
 
 EngMod2_q3_cfac <- tibble(
@@ -212,158 +197,11 @@ EngData %>%
   geom_vline(xintercept = 16.5,
              linetype = "dotted",
              col = "#000000CC")
+```
 
+# modScot99_07 - Comparing with Scotland for three stages, split at 1999 and 2007
 
-## modScot99 - Comparing for pre-post 1999 --------------------------------------------
-
-lm(Value ~ Time + England + Time_Eng + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng,
-     data = EngScotContro) %>%
-  assign("modScot99", ., envir = .GlobalEnv) %T>%
-  summary() %>% 
-{  print(ggplot(eval(.$call$data), aes(
-    Year, Value, group = interaction(Country, Cat1), col = Country
-  )) +
-    geom_point() + geom_smooth(method = "lm", se = FALSE))
-}
-
-testAutocorr(modScot99)  # Decay in ACF, sig at lag=3 in PACF. Indicates AR3
-
-modScot99_p3 <-
-  gls(
-    Value ~ Time + England + Time_Eng + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng,
-    data = EngScotContro,
-    correlation = corARMA(p = 3, form =  ~ Time | England),
-    method = "ML"
-  )
-summary(modScot99_p3)
-coef(modScot99_p3)
-
-## Testing other models
-modScot99_p3 %>% update(correlation = corARMA(p = 4, form = ~ Time |
-                                                England)) %>%
-  anova(modScot99_p3)
-
-modScot99_p3 %>% update(correlation = NULL) %>%
-  anova(modScot99_p3)
-
-modScot99_p3 %>% update(correlation = corARMA(
-  p = 3,
-  q = 1,
-  form = ~ Time | England
-)) %>%
-  anova(modScot99_p3)  # Conclusion: p3 is a bad model!
-
-# modScot99_p3_cfac <- tibble(
-#   Time = c(8:25),
-#   Trend1 = c(1:18),
-#   Value = (
-#     modScot99_p3$coefficients[1] +
-#       modScot99_p3$coefficients[2] * Time +
-#       modScot99_p3$coefficients[3] +
-#       modScot99_p3$coefficients[4] * Time +
-#       modScot99_p3$coefficients[5] +
-#       modScot99_p3$coefficients[6] * Trend1
-#   )
-# )
-
-modScot99_null <- 
-  gls(
-    Value ~ Time + England + Time_Eng + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng,
-    data = EngScotContro,
-    correlation = NULL,
-    method = "ML"
-  )
-summary(modScot99_null)
-confint(modScot99_null)
-
-modScot99_null_cfac <- tibble(
-  Time=c(8:25),
-  Cat1=1,
-  Trend1=c(1:18),
-  England=1,
-  Time_Eng=c(8:25),
-  Cat1_Eng=0,
-  Trend1_Eng=0
-)
-
-modScot99_null_cfac <- left_join(modScot99_null_cfac, constructCIRibbon(modScot99_null_cfac, modScot99_null))
-
-EngScotContro %>%
-  mutate(predict = predict(modScot99_null)) %>% 
-  ggplot(aes(Time, Value, col = Country, group = interaction(Country, Cat1))) +
-  geom_point() +
-  geom_smooth(
-    data = modScot99_null_cfac,
-    aes(x = Time,
-        y = Value,
-    ymax = HiCI,
-    ymin=lowCI),
-    stat="identity",
-    linetype = "dashed",
-    col = "#FC8D62",
-    fill = "#FC8D62",
-    size = 1,
-    inherit.aes = FALSE
-  ) +
-  geom_line(aes(y = predict), size = 1) +
-  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
-                     labels = seq(1995, 2015, by = 5)) +
-  geom_vline(xintercept = 7.5,
-             linetype = "dotted",
-             col = "#000000CC") +
-  theme(panel.background = element_blank()) +
-  ylab("Rate of pregnancies to under-18s, per 1,000") +
-  xlab("Year") +
-  coord_cartesian(ylim = c(0, 60)) +
-  scale_y_continuous(expand = c(0, 0))
-
-## modScot07 ## Not used## Comparing for pre-post 2007 --------------
-
-
-  lm(Value ~ Time + England + Time_Eng + Cat2 + Trend2 + Cat2_Eng + Trend2_Eng,
-     data = EngScotContro) %>%
-  assign("modScot07", ., envir = .GlobalEnv) %T>%
-{  print(ggplot(eval(.$call$data), aes(
-    Year, Value, group = interaction(Country, Cat2), col = Country
-  )) +
-    geom_point() + geom_smooth(method = "lm", se=FALSE))
-} %>% 
-  summary()
-
-## modScot99_07 - Comparing for three stages, split at 1999 and 2007 --------------------
-
-#** Initial model -----
-
-lm(
-  Value ~ Time +
-    England +
-    Time_Eng +
-    Cat1 +
-    Trend1 +
-    Cat1_Eng +
-    Trend1_Eng +
-    Cat2 +
-    Trend2 +
-    Cat2_Eng +
-    Trend2_Eng,
-  data = EngScotContro
-) %>%
-  assign("modScot99_07", ., envir = .GlobalEnv) %T>%
-  {print(ggplot(data=eval(.$call$data), aes(
-      Year,
-      Value,
-      group = interaction(Country, Cat1, Cat2),
-      col = Country
-    )) +
-      geom_point() + geom_smooth(method = "lm", se = FALSE))
-  } %>%
-  summary()
-
-## test autocorrelation
-testAutocorr(modScot99_07)  # Assume NULL for now
-
-#** New model -----
-
+```{r message=FALSE}
 modScot99_07_null <- gls(
   Value ~ Time +
     England +
@@ -381,10 +219,10 @@ modScot99_07_null <- gls(
   method = "ML"
 )
 
-summary(modScot99_07_null)
+summary(modScot99_07_null)$tTable
+```
 
-confint(modScot99_07_null)
-
+```{r echo=FALSE, message=FALSE}
 modScot99_07_null_cfac <- EngScotContro[8:25, ] %>%
   select(Time, England, Cat1, Cat2, Trend1, Trend2, Time_Eng) %>%
   mutate(
@@ -478,29 +316,11 @@ EngScotContro %>%
                "England" = "#CF142B",
                "Control" = "#F7D917"),
     aesthetics = c("colour", "fill"))
+```
 
-ggsave("graphs/Scot99_07.png")
+# modScotPI - Comparing Scotland pre-1999 and post-2007, proposing phase-in
 
-# modScotPI - Comparing pre-1999 and post-2007, proposing phase-in -------------------------------------------
-
-#** Initial model -----
-
-lm(Value ~ Time + England + Time_Eng + Cat2 + Trend2 + Cat2_Eng + Trend2_Eng,
-   data = {EngScotContro %>% filter(Year < 1999 | Year > 2007)}) %>%
-  assign("modScotPI", ., envir = .GlobalEnv) %T>%
-  {print(ggplot(data = eval(.$call$data), aes(
-    Year,
-    Value,
-    group = interaction(Country, Cat1, Cat2),
-    col = Country
-  )) +
-    geom_point() + geom_smooth(method = "lm", se = FALSE))} %>% 
-  summary()
-
-testAutocorr(modScotPI, max.lag=14, time.points = 16)  # Possibly no autocorrelation? Sig at PACF 12 and 13
-
-#** New model -----
-
+```{r message=FALSE}
 modScotPI_null <-
   gls(
     Value ~ Time + England + Time_Eng + Cat2 + Trend2 + Cat2_Eng + Trend2_Eng,
@@ -509,9 +329,9 @@ modScotPI_null <-
     method = "ML"
   )
 
-summary(modScotPI_null)
-confint(modScotPI_null)
-
+summary(modScotPI_null)$tTable
+```
+```{r echo=FALSE, message=FALSE}
 modScotPI_null_cfac <- tibble(
   Time = c(17:25),
   England = 1,
@@ -606,45 +426,11 @@ EngScotContro %>%
                "England" = "#CF142B",
                "Control" = "#F7D917"),
     aesthetics = c("colour", "fill"))
+```
 
-ggsave("graphs/Scot_99_07.png")
+# modScotPI_99_07 - Comparing Eng vs Scot with phase-in and two interventions
 
-# modScotPI_99_07 - comparing Eng vs Scot with phase-in and two interventions --------------------------------
-
-#** Initial model -----
-
-lm(
-  Value ~ Time +
-    England +
-    Time_Eng +
-    Cat1 +
-    Trend1 +
-    Cat1_Eng +
-    Trend1_Eng +
-    Cat2 +
-    Trend2 +
-    Cat2_Eng +
-    Trend2_Eng,
-  data = {EngScotContro %>% 
-      filter(Year < 1999 | Year > 2000) %>% 
-      mutate(Trend1=ifelse(Cat1==0,0,Trend1-2),
-             Trend1_Eng=Trend1*England)}
-) %>%
-  assign("modScotPI_99_07", ., envir = .GlobalEnv) %T>%
-  {print(ggplot(data=eval(.$call$data), aes(
-    Year,
-    Value,
-    group = interaction(Country, Cat1, Cat2),
-    col = Country
-  )) +
-    geom_point() + geom_smooth(method = "lm", se = FALSE))
-  } %>%
-  summary()
-
-## test autocorrelation
-testAutocorr(modScotPI_99_07, time.points = 23)  # Assume NULL for now
-
-#** New model -----
+```{r message=FALSE}
 modScotPI_99_07_null <- gls(
   Value ~ Time +
     England +
@@ -665,11 +451,9 @@ modScotPI_99_07_null <- gls(
   method = "ML"
 )
 
-summary(modScotPI_99_07_null)
-
-confint(modScotPI_99_07_null)
-
-
+summary(modScotPI_99_07_null)$tTable
+```
+```{r echo=FALSE, message=FALSE}
 modScotPI_99_07_null_cfac <- EngScotContro[10:25, ] %>%
   select(Time, England, Cat1, Cat2, Trend2, Time_Eng) %>%
   mutate(
@@ -777,108 +561,11 @@ EngScotContro %>%
                "England" = "#CF142B",
                "Control" = "#F7D917"),
     aesthetics = c("colour", "fill"))
+```
 
-ggsave("graphs/ScotPI_99_07.png")
+# modWal99_07 - Comparing with Wales for changes at 1999 and 2007 
 
-# modWal99 - Comparing for changes pre-post 1999 -------------------------------------------------------------
-
-lm(Value ~ Time + England + Time_Eng + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng,
-   data = EngWalContro) %>%
-  assign("modWal99", ., envir = .GlobalEnv) %T>%
-  summary() %>% 
-  {  print(ggplot(eval(.$call$data), aes(
-    Year, Value, group = interaction(Country, Cat1), col = Country
-  )) +
-    geom_point() + geom_smooth(method = "lm", se = FALSE))
-  }
-
-testAutocorr(modWal99)
-
-modWal99_null <- 
-  gls(
-    Value ~ Time + England + Time_Eng + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng,
-    data = EngWalContro,
-    correlation = NULL,
-    method = "ML"
-  )
-summary(modWal99_null)
-confint(modWal99_null)
-
-modWal99_null_cfac <- tibble(
-  Time=c(8:25),
-  Cat1=1,
-  Trend1=c(1:18),
-  England=1,
-  Time_Eng=c(8:25),
-  Cat1_Eng=0,
-  Trend1_Eng=0
-)
-
-modWal99_null_cfac <- left_join(modWal99_null_cfac, constructCIRibbon(modWal99_null_cfac, modWal99_null))
-
-EngWalContro %>%
-  mutate(predict = predict(modWal99_null)) %>% 
-  ggplot(aes(Time, Value, col = Country, group = interaction(Country, Cat1))) +
-  geom_point() +
-  geom_smooth(
-    data = modWal99_null_cfac,
-    aes(x = Time,
-        y = Value,
-        ymax = HiCI,
-        ymin=lowCI),
-    stat="identity",
-    linetype = "dashed",
-    col = "#FC8D62",
-    fill = "#FC8D62",
-    size = 1,
-    inherit.aes = FALSE
-  ) +
-  geom_line(aes(y = predict), size = 1) +
-  scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
-                     labels = seq(1995, 2015, by = 5)) +
-  geom_vline(xintercept = 7.5,
-             linetype = "dotted",
-             col = "#000000CC") +
-  theme(panel.background = element_blank()) +
-  ylab("Rate of pregnancies to under-18s, per 1,000") +
-  xlab("Year") +
-  coord_cartesian(ylim = c(0, 60)) +
-  scale_y_continuous(expand = c(0, 0))
-
-# modWal99_07 - Comparing for changes at 1999 and 2007 -------------------------------------------------------
-
-#** Initial model -----
-
-lm(
-  Value ~ Time +
-    England +
-    Time_Eng +
-    Cat1 +
-    Trend1 +
-    Cat1_Eng +
-    Trend1_Eng +
-    Cat2 +
-    Trend2 +
-    Cat2_Eng +
-    Trend2_Eng,
-  data = EngWalContro
-) %>%
-  assign("modWal99_07", ., envir = .GlobalEnv) %T>%
-  {print(ggplot(data=eval(.$call$data), aes(
-    Year,
-    Value,
-    group = interaction(Country, Cat1, Cat2),
-    col = Country
-  )) +
-    geom_point() + geom_smooth(method = "lm", se = FALSE))
-  } %>%
-  summary()
-
-## test autocorrelation
-testAutocorr(modWal99_07)  # Assume NULL for now
-
-#** New model -----
-
+```{r message=FALSE}
 modWal99_07_null <- gls(
   Value ~ Time +
     England +
@@ -896,10 +583,9 @@ modWal99_07_null <- gls(
   method = "ML"
 )
 
-summary(modWal99_07_null)
-
-confint(modWal99_07_null)
-
+summary(modWal99_07_null)$tTable
+```
+```{r echo=FALSE, message=FALSE}
 modWal99_07_null_cfac <- tibble(
   Time = c(8:25),
   England = 1,
@@ -917,8 +603,6 @@ modWal99_07_null_cfac <- tibble(
 modWal99_07_null_cfac <-
   modWal99_07_null_cfac %>%
   left_join(constructCIRibbon(modWal99_07_null_cfac, modWal99_07_null))
-
-#** Graphing final model -----
 
 EngWalContro %>%
   left_join(constructCIRibbon((filter(., England==1, Year>1998)), modWal99_07_null)) %>%  # England CI ribbon
@@ -998,29 +682,11 @@ EngWalContro %>%
                "England" = "#CF142B",
                "Control" = "#F7D917"),
     aesthetics = c("colour", "fill"))
+```
 
-ggsave("graphs/Wal99_07.png")
+# modWalPI - Comparing pre-1999 and post 2007 (assuming phase-in)
 
-# modWalPI - Comparing pre-1999 and post 2007 (assuming phase-in) --------------------------------------------
-
-#** Initial model -----
-
-lm(Value ~ Time + England + Time_Eng + Cat2 + Trend2 + Cat2_Eng + Trend2_Eng,
-   data = {EngWalContro %>% filter(Year < 1999 | Year > 2007)}) %>%
-  assign("modWalPI", ., envir = .GlobalEnv) %T>%
-  {print(ggplot(data = eval(.$call$data), aes(
-    Year,
-    Value,
-    group = interaction(Country, Cat1, Cat2),
-    col = Country
-  )) +
-    geom_point() + geom_smooth(method = "lm", se = FALSE))} %>% 
-  summary()
-
-testAutocorr(modWalPI, max.lag=14, time.points = 16)  # Possibly no autocorrelation? Sig at PACF 12 and 13
-
-#** New model -----
-
+```{r message=FALSE}
 modWalPI_null <-
   gls(
     Value ~ Time + England + Time_Eng + Cat2 + Trend2 + Cat2_Eng + Trend2_Eng,
@@ -1029,9 +695,9 @@ modWalPI_null <-
     method = "ML"
   )
 
-summary(modWalPI_null)
-confint(modWalPI_null)
-
+summary(modWalPI_null)$tTable
+```
+```{r echo=FALSE, message=FALSE}
 modWalPI_null_cfac <- tibble(
   Time = c(17:25),
   England = 1,
@@ -1045,8 +711,6 @@ modWalPI_null_cfac <- tibble(
 modWalPI_null_cfac <-
   modWalPI_null_cfac %>%
   left_join(constructCIRibbon(modWalPI_null_cfac, modWalPI_null))
-
-#** Graphing final model -----
 
 EngWalContro %>%
   filter(Year < 1999 | Year > 2007) %>%
@@ -1126,46 +790,11 @@ EngWalContro %>%
                "England" = "#CF142B",
                "Control" = "#F7D917"),
     aesthetics = c("colour", "fill"))
+```
 
-ggsave("graphs/WalPI.png")
+# modWalPI_99_07 - comparing Eng vs Wal with phase-in period and two interventions
 
-# modWalPI_99_07 - comparing Eng vs Wal with phase-in period and two interventions ---------------------------
-
-#** Initial model -----
-
-lm(
-  Value ~ Time +
-    England +
-    Time_Eng +
-    Cat1 +
-    Trend1 +
-    Cat1_Eng +
-    Trend1_Eng +
-    Cat2 +
-    Trend2 +
-    Cat2_Eng +
-    Trend2_Eng,
-  data = {EngWalContro %>% 
-      filter(Year < 1999 | Year > 2000) %>% 
-      mutate(Trend1=ifelse(Cat1==0,0,Trend1-2),
-             Trend1_Eng=Trend1*England)}
-) %>%
-  assign("modWalPI_99_07", ., envir = .GlobalEnv) %T>%
-  {print(ggplot(data=eval(.$call$data), aes(
-    Year,
-    Value,
-    group = interaction(Country, Cat1, Cat2),
-    col = Country
-  )) +
-    geom_point() + geom_smooth(method = "lm", se = FALSE))
-  } %>%
-  summary()
-
-## test autocorrelation
-testAutocorr(modWalPI_99_07, time.points = 23)  # Assume NULL for now
-
-#** New model -----
-
+```{r message=FALSE}
 modWalPI_99_07_null <- gls(
   Value ~ Time +
     England +
@@ -1186,11 +815,9 @@ modWalPI_99_07_null <- gls(
   method = "ML"
 )
 
-summary(modWalPI_99_07_null)
-
-confint(modWalPI_99_07_null)
-
-
+summary(modWalPI_99_07_null)$tTable
+```
+```{r echo=FALSE, message=FALSE}
 modWalPI_99_07_null_cfac <- EngWalContro[10:25, ] %>%
   select(Time, England, Cat1, Cat2, Trend2, Time_Eng) %>%
   mutate(
@@ -1298,5 +925,5 @@ EngWalContro %>%
                "England" = "#CF142B",
                "Control" = "#F7D917"),
     aesthetics = c("colour", "fill"))
+```
 
-ggsave("graphs/WalPI_99_07.png")
