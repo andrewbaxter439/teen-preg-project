@@ -1,12 +1,14 @@
 ---
 title: "Initial ITS models"
 output:
-  word_document:
-    reference_docx: ITS_template.docx
-    fig_width: 8
-    fig_height: 6
   html_document:
     df_print: paged
+  # word_document:
+  #   reference_docx: ITS_template.docx
+  #   fig_width: 8
+  #   fig_height: 6
+  github_document: default
+    
 ---
 
 ```{r setup, include=FALSE}
@@ -15,6 +17,8 @@ library(readxl)
 library(broom)
 library(nlme)
 library(car)
+
+options(scipen=10, digits=3)
 
 testAutocorr <- function(model, data=NULL, max.lag = 10, time.points = 25) {
   data <- eval(model$call$data)  # Only works if 'lm' call has dataframe named in bracket
@@ -47,6 +51,11 @@ constructCIRibbon <- function(newdata, model) {
   sds <- sqrt(diag(vars))
   newdata <- newdata %>% mutate(lowCI = Predict - 1.96 * sds,
                                 HiCI = Predict + 1.96 * sds)
+}
+
+printCoefficients <- function(model){
+  as_tibble(trimws(format(round(summary(model)$tTable, 3), nsmall=3))) %>% 
+    print()
 }
 ```
 # Importing and setting up data
@@ -158,7 +167,7 @@ EngMod2_q3 <- gls(
   correlation = corARMA(q = 3, form =  ~ Time),
   method = "ML"
 )
-summary(EngMod2_q3)$tTable
+printCoefficients(EngMod2_q3)
 ```
 ```{r echo=FALSE, message=FALSE}
 EM2q3_co <- EngMod2_q3$coefficients
@@ -219,7 +228,7 @@ modScot99_07_null <- gls(
   method = "ML"
 )
 
-summary(modScot99_07_null)$tTable
+printCoefficients(modScot99_07_null)
 ```
 
 ```{r echo=FALSE, message=FALSE}
@@ -329,7 +338,7 @@ modScotPI_null <-
     method = "ML"
   )
 
-summary(modScotPI_null)$tTable
+printCoefficients(modScotPI_null)
 ```
 ```{r echo=FALSE, message=FALSE}
 modScotPI_null_cfac <- tibble(
@@ -451,7 +460,7 @@ modScotPI_99_07_null <- gls(
   method = "ML"
 )
 
-summary(modScotPI_99_07_null)$tTable
+printCoefficients(modScotPI_99_07_null)
 ```
 ```{r echo=FALSE, message=FALSE}
 modScotPI_99_07_null_cfac <- EngScotContro[10:25, ] %>%
@@ -583,7 +592,7 @@ modWal99_07_null <- gls(
   method = "ML"
 )
 
-summary(modWal99_07_null)$tTable
+printCoefficients(modWal99_07_null)
 ```
 ```{r echo=FALSE, message=FALSE}
 modWal99_07_null_cfac <- tibble(
@@ -695,7 +704,7 @@ modWalPI_null <-
     method = "ML"
   )
 
-summary(modWalPI_null)$tTable
+printCoefficients(modWalPI_null)
 ```
 ```{r echo=FALSE, message=FALSE}
 modWalPI_null_cfac <- tibble(
@@ -815,7 +824,7 @@ modWalPI_99_07_null <- gls(
   method = "ML"
 )
 
-summary(modWalPI_99_07_null)$tTable
+printCoefficients(modWalPI_99_07_null)
 ```
 ```{r echo=FALSE, message=FALSE}
 modWalPI_99_07_null_cfac <- EngWalContro[10:25, ] %>%
