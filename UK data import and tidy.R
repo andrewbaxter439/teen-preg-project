@@ -36,7 +36,23 @@ Scot.births <-
   )[c(3:10, 12), ] %>%
   select(Age = 'X__1', 1:32) %>%
    gather(Year, Births, -1) %>% 
-  mutate_all(as.numeric) %>%
+  mutate_all(as.numeric) 
+
+
+# Attempted function to calculate via weigted means ----------------------------------------------------------
+
+est_conceptions <- function(year, age){
+  tbl <- tibble(Year = c(year, year+1))
+  tbl2 <-  tibble(Age = c(age, age+1))
+  tbl3 <- merge(tbl, tbl2)
+  tbl3 %>% 
+    left_join(Scot.births) %>% 
+    mutate(wt1 = c(0.25, 0.75, 0.25, 0.75),
+           wt2 = 
+    )
+}
+
+Scot.births %>%
   rowwise() %>% 
   mutate(Conceptions = (function(year, age)
   sum(0.25 * 0.25 * pull(Scot.births %>% filter(Age == age, Year == year) %>% select(Births)),
