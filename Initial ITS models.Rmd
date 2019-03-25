@@ -3,11 +3,12 @@ title: "Initial ITS models"
 output:
   html_document:
     df_print: paged
+    theme: readable
   # word_document:
   #   reference_docx: ITS_template.docx
   #   fig_width: 8
   #   fig_height: 6
-  github_document: default
+  # github_document: default
     
 ---
 
@@ -18,7 +19,7 @@ library(broom)
 library(nlme)
 library(car)
 
-options(scipen=10, digits=3)
+# options(scipen=10, digits=3)
 
 testAutocorr <- function(model, data=NULL, max.lag = 10, time.points = 25) {
   data <- eval(model$call$data)  # Only works if 'lm' call has dataframe named in bracket
@@ -54,8 +55,10 @@ constructCIRibbon <- function(newdata, model) {
 }
 
 printCoefficients <- function(model){
-  as_tibble(trimws(format(round(summary(model)$tTable, 3), nsmall=3))) %>% 
-    print()
+as_tibble(trimws(format(round(summary(model)$tTable, 3), nsmall=3))) %>%
+  mutate(Coefficient = rownames(summary(model)$tTable)) %>% 
+  select(Coefficient, Value, Std.Error, 'p-value') %>% 
+  print()
 }
 ```
 # Importing and setting up data
