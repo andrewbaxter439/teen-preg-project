@@ -1,8 +1,9 @@
 library(tidyverse)
 
-# European Health Information Gateway abortion stats
+# European Health Information Gateway abortion stats - number of abortions, age under 20 years
 
-all.Europe.ab <- read_csv("EHIG_abortions.csv", skip=25)[1:1208,]
+all.Europe.ab <- read_csv("Downloaded data files/EHIG_abortions.csv", skip=25)[1:1208,]
+ccodes <- read_tsv("country_codes.txt")
 all_EU_ab_tidy <- all.Europe.ab %>%
   select(Code=COUNTRY, Year=YEAR, Total=VALUE) %>%
   filter(!is.na(Code)) %>%

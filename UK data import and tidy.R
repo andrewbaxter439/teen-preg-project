@@ -41,16 +41,16 @@ Scot.births <-
 
 # Attempted function to calculate via weigted means ----------------------------------------------------------
 
-est_conceptions <- function(year, age){
+#est_conceptions <- function(year, age){
   tbl <- tibble(Year = c(year, year+1))
   tbl2 <-  tibble(Age = c(age, age+1))
   tbl3 <- merge(tbl, tbl2)
   tbl3 %>% 
     left_join(Scot.births) %>% 
     mutate(wt1 = c(0.25, 0.75, 0.25, 0.75),
-           wt2 = 
+           wt2 = c()
     )
-}
+#}
 
 Scot.births %>%
   rowwise() %>% 
