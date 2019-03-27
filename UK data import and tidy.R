@@ -2,12 +2,64 @@ library(tidyverse)
 library(gganimate)
 library(readxl)
 
+estConceptions <- function(year, age){
+  # Function to create estimated conceptions from weighted means for year = 'year' and age = 'age'
+  # returns: numeric value of estimated conceptions
+  tbl <- tibble(Year = c(year, year+1))
+  tbl2 <-  tibble(Age = c(age, age+1))
+  tbl3 <- merge(tbl, tbl2)
+  tbl4 <- tbl3 %>% left_join(Scot.births) 
+  tbl4 %>% 
+    mutate(wt1 = c(0.27, 0.73, 0.27, 0.73),  # Weighting by probability of birth in same year as conc. (38/52)
+           wt2 = c(0.27, 0.27, 0.73, 0.73),  # Weighting by probability of birth at same age as conc.
+           wt3 = c(sum(tbl4[Age==age, "Births"])/sum(tbl4[, "Births"],   na.rm = TRUE),  # Weighting by probability
+                   sum(tbl4[Age==age, "Births"])/sum(tbl4[, "Births"],   na.rm = TRUE),  # increasing with age -
+                   sum(tbl4[Age==age+1, "Births"])/sum(tbl4[, "Births"], na.rm = TRUE),  # proportion at 'age'
+                   sum(tbl4[Age==age+1, "Births"])/sum(tbl4[, "Births"], na.rm = TRUE)),
+           wtTot = wt1*wt2*wt3
+    ) %>% 
+    summarise(Conceptions = weighted.mean(Births, w=wtTot)) %>% 
+    pull()
+}
+# Grouping births and populations setup ---------------------------------------------------------------------
+
+birthAgeGrps <- tibble(Age=factor(c(12:15, 12:17, 12:19)),
+                       agegrp=factor(c(1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,3,3),
+                                     labels=c("Under 16", "Under 18", "Under 20")))  # Three ranges of births
+
+
+popAgeGrps <- tibble(Age=factor(c(13:15, 15:17, 15:19)),
+                     agegrp=factor(c(1,1,1,2,2,2,3,3,3,3,3),
+                                   labels=c("Under 16", "Under 18", "Under 20")))  # Three ranges of pop
+
+# Combine pop and births and calculate rates ------------------------------
+
+sumBirths <- teenBirths %>% 
+  merge(birthAgeGrps) %>% 
+  group_by(Code, Country, Year, agegrp) %>% 
+  summarise(sumBirths = sum(Total)) # create summary
+
+sumPops <- allpops %>%
+  merge(popAgeGrps) %>%
+  group_by(Code, Year, agegrp) %>% 
+  summarise(sumPops = sum(Female)) # create summary
+
+birthRates <-left_join(sumBirths, sumPops,
+                       by=c("Year","agegrp","Code")) %>%
+  filter(Year>1984, Country %in% country_names) %>%
+  mutate(rate=1000*sumBirths/sumPops)
+
 # Import Scotland birth data ------------------------------------------------------------------------------
 
 Scot.pop <- read_tsv(
   "Downloaded data files/SCOPop.txt"
 ) %>% 
   select(Year, Age, Total = Female)
+
+sumScot.pop <- Scot.pop %>% 
+  inner_join(popAgeGrps, by="Age") %>% 
+  group_by(Year, agegrp) %>% 
+  summarise(Population = sum(Total))
 
 Scot.conc <-
   read_xls(
@@ -25,7 +77,7 @@ Scot.conc <-
     '<20' = '<20 3'
   )
 
-# Scotland births to estimate pregnancies pre-1994
+# Scotland births to estimate pregnancies pre-1994 ------------------
 # Data from NRS
 
 Scot.births <-
@@ -34,65 +86,103 @@ Scot.births <-
     range = "AQ4:BW16",
     col_names = TRUE
   )[c(3:10, 12), ] %>%
-  select(Age = 'X__1', 1:32) %>%
+  select(Age = '...33', 1:32) %>%
    gather(Year, Births, -1) %>% 
   mutate_all(as.numeric) 
 
+# Estimate births for age groups ------------------
 
-# Attempted function to calculate via weigted means ----------------------------------------------------------
+Scot.births %>% 
+  rowwise %>% 
+  mutate(Conceptions = estConceptions(Year, Age)) %>% 
+  merge(birthAgeGrps) %>% 
+  group_by(Year, agegrp) %>% 
+  summarise(Deliveries = sum(Conceptions, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  assign("Scot.births.adj", ., envir = .GlobalEnv)
 
-#est_conceptions <- function(year, age){
-  tbl <- tibble(Year = c(year, year+1))
-  tbl2 <-  tibble(Age = c(age, age+1))
-  tbl3 <- merge(tbl, tbl2)
-  tbl3 %>% 
-    left_join(Scot.births) %>% 
-    mutate(wt1 = c(0.25, 0.75, 0.25, 0.75),
-           wt2 = c()
-    )
-#}
+# Import ISD to check accuracy -------------------
 
-Scot.births %>%
-  rowwise() %>% 
-  mutate(Conceptions = (function(year, age)
-  sum(0.25 * 0.25 * pull(Scot.births %>% filter(Age == age, Year == year) %>% select(Births)),
-      0.25 * 0.75 * pull(Scot.births %>% filter(Age == age, Year == year+1) %>% select(Births)),
-      0.75 * 0.25 * pull(Scot.births %>% filter(Age == age+1, Year == year) %>% select(Births)),
-      0.75 * 0.75 * pull(Scot.births %>% filter(Age == age+1, Year == year+1) %>% select(Births)),
-      na.rm = T)
-)(Year, Age))
+Scot.births.ISD <- read_xls("Downloaded data files/mat_tp_table4.xls", range = "B5:K29")[3:24, ] %>% 
+  select(Year = 'Year of conception',
+         'Under 16_del' = 3,
+         'Under 16_abo' = 4,
+         'Under 18_del' = 6,
+         'Under 18_abo' = 7,
+         'Under 20_del' = 9,
+         'Under 20_abo' = 10)
+
+Scot.births.ISD %>% 
+  gather("cat", "value", 2:7) %>% 
+  separate(cat, c("agegrp", "cat"), sep = "_") %>% 
+  spread(cat, value) %>% 
+  mutate(agegrp = factor(agegrp),
+         Deliveries = as.numeric(del)) %>%
+  left_join(Scot.births.adj, by=c("Year", "agegrp"), suffix = c(".rec", ".est")) %>% 
+  mutate(est_diff = Deliveries.est-Deliveries.rec,
+         est_ratio = Deliveries.est/Deliveries.rec) %>%
+  group_by(agegrp) %>% 
+  mutate(min_diff = min(est_diff), max_diff=max(est_diff),
+         min_ratio = min(est_ratio), max_ratio=max(est_ratio),
+         mean_ratio = mean(est_ratio),
+         Deliveries.corr = Deliveries.est/mean_ratio) %>% 
+  assign("Scot.births.corr", ., envir = .GlobalEnv) %T>% 
+  {print(ggplot(data = .,aes(Year)) +
+  geom_line(aes(y = Deliveries.rec, col = "Recorded deliveries")) +
+  geom_line(aes(y = Deliveries.est, col = "Estimated deliveries")) +
+  geom_line(aes(y = Deliveries.corr, col = "Corrected deliveries")) +
+  facet_wrap(~agegrp))} %>% 
+  head()
+
+# Old calculations - not accounting for greater rates as ageing through year
+# Scot.births %>%
+#   rowwise() %>% 
+#   mutate(Conceptions = (function(year, age)
+#   sum(0.25 * 0.25 * pull(Scot.births %>% filter(Age == age, Year == year) %>% select(Births)),
+#       0.25 * 0.75 * pull(Scot.births %>% filter(Age == age, Year == year+1) %>% select(Births)),
+#       0.75 * 0.25 * pull(Scot.births %>% filter(Age == age+1, Year == year) %>% select(Births)),
+#       0.75 * 0.75 * pull(Scot.births %>% filter(Age == age+1, Year == year+1) %>% select(Births)),
+#       na.rm = T)
+# )(Year, Age))
  
+sumScotBirths <- Scot.births.corr %>% 
+  select(agegrp, mean_ratio) %>% 
+  unique() %>% 
+  inner_join(Scot.births.adj,., by = "agegrp") %>% 
+  filter(Deliveries != 0) %>% 
+  mutate(Deliveries.corr = Deliveries / mean_ratio) #%>% 
+  # ggplot(aes(Year)) +
+  # geom_line(aes(y = Deliveries.corr, col = "Corrected deliveries")) +
+  # geom_line(data = Scot.births.corr, aes(y = Deliveries.rec, col = "Recorded deliveries")) +
+  # facet_wrap(~agegrp)
  
 Scot.abort <- read_xlsx("Downloaded data files/mat_aas_table7.xlsx", skip=4) %>% 
+  mutate(agegrp = "Under 20") %>% 
   select(
-    Year = '..1',
-    'Under 20'
+    Year = '...1',
+    agegrp,
+    Abortions = 'Under 20'
   ) %>% 
   na.omit() %>% 
   mutate(Year=as.numeric(gsub("(\\d\\d\\d\\d)(.*$)", "\\1", Year)))
 
-sumScotBirths <- Scot.births %>%
-  gather("Year", "Total",-1) %>%
-  mutate(Year = as.numeric(Year)) %>%
-  merge(birthAgeGrps) %>%
-  group_by(Year, agegrp) %>%
-  summarise(sumBirths = sum(Total)) # create summary
+# sumScotBirths <- Scot.births %>%
+#   gather("Year", "Total",-1) %>%
+#   mutate(Year = as.numeric(Year)) %>%
+#   merge(birthAgeGrps) %>%
+#   group_by(Year, agegrp) %>%
+#   summarise(sumBirths = sum(Total)) # create summary
 
-# merge with scotland births and population ---------------------------------------------------------------
+# merge with population to create rates for under-20s -------------------------------------------------------
 
-Scot.birth.rates <- Scot.births %>%
-  gather("Year", "Total",-1) %>%
-  mutate(Year = as.numeric(Year)) %>%
-  left_join(allpops %>%
-              filter(Code == "GBR_SCO") %>%
-              select(Age, Female, Year)) %>%
-  merge(agecalcs) %>%
-  group_by(Year, agegrp, agecat) %>%
-  summarise(popsum = sum(Female), birthsum = sum(Total)) %>%
-  ungroup() %>%
-  filter(agegrp == agecat) %>%
-  mutate(agecat = factor(agecat,
-                         labels = c("Under 16", "Under 18", "Under 20"))) %>%
-  mutate(rate = 1000 * birthsum / popsum)
+scotConceptionsUnde20 <- sumScotBirths %>% 
+  filter(agegrp == "Under 20") %>% 
+  select(Year, agegrp, Births = Deliveries.corr) %>% 
+  left_join(Scot.abort) %>% 
+  mutate(Total = Births + Abortions) %>% 
+  left_join(sumScot.pop) %>% 
+  mutate(Value = 1000*Total/Population)
+
+
 
 
