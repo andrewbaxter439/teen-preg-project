@@ -183,6 +183,7 @@ scotConceptionsUnde20 <- sumScotBirths %>%
   left_join(sumScot.pop) %>% 
   mutate(Value = 1000*Total/Population)
 
+write_csv(scotConceptionsUnde20, "EstScot_1985_2015.csv")
 
 
 

@@ -466,7 +466,8 @@ EngScotContro %>%
   scale_x_continuous(breaks = c(4, 9, 14, 19, 24),
                      labels = seq(1995, 2015, by = 5)) +
   theme(panel.background = element_blank(),
-        legend.key  = element_blank()) +
+        legend.key  = element_blank(),
+        panel.grid = element_blank()) +
   ylab("Rate of pregnancies to under-18s, per 1,000") +
   xlab("Year") +
   coord_cartesian(ylim = c(0, 60)) +
