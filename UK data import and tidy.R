@@ -1,6 +1,7 @@
 library(tidyverse)
 library(gganimate)
 library(readxl)
+library(broom)
 
 estConceptions <- function(year, age){
   # Function to create estimated conceptions from weighted means for year = 'year' and age = 'age'
@@ -10,7 +11,7 @@ estConceptions <- function(year, age){
   tbl3 <- merge(tbl, tbl2)
   tbl4 <- tbl3 %>% left_join(Scot.births) 
   tbl4 %>% 
-    mutate(wt1 = c(0.27, 0.73, 0.27, 0.73),  # Weighting by probability of birth in same year as conc. (38/52)
+    mutate(wt1 = c(0.27, 0.73, 0.27, 0.73),  # Weighting by probability of birth in same year as conc. (14/52)
            wt2 = c(0.27, 0.27, 0.73, 0.73),  # Weighting by probability of birth at same age as conc.
            wt3 = c(sum(tbl4[Age==age, "Births"])/sum(tbl4[, "Births"],   na.rm = TRUE),  # Weighting by probability
                    sum(tbl4[Age==age, "Births"])/sum(tbl4[, "Births"],   na.rm = TRUE),  # increasing with age -
@@ -101,7 +102,7 @@ Scot.births %>%
   ungroup() %>% 
   assign("Scot.births.adj", ., envir = .GlobalEnv)
 
-# Import ISD to check accuracy -------------------
+# Import ISD to check accuracy ----------------------------------
 
 Scot.births.ISD <- read_xls("Downloaded data files/mat_tp_table4.xls", range = "B5:K29")[3:24, ] %>% 
   select(Year = 'Year of conception',
@@ -112,6 +113,8 @@ Scot.births.ISD <- read_xls("Downloaded data files/mat_tp_table4.xls", range = "
          'Under 20_del' = 9,
          'Under 20_abo' = 10)
 
+#** Applying correction through mean ratio diffs ------------------
+
 Scot.births.ISD %>% 
   gather("cat", "value", 2:7) %>% 
   separate(cat, c("agegrp", "cat"), sep = "_") %>% 
@@ -120,12 +123,12 @@ Scot.births.ISD %>%
          Deliveries = as.numeric(del)) %>%
   left_join(Scot.births.adj, by=c("Year", "agegrp"), suffix = c(".rec", ".est")) %>% 
   mutate(est_diff = Deliveries.est-Deliveries.rec,
-         est_ratio = Deliveries.est/Deliveries.rec) %>%
+         est_ratio = Deliveries.rec/Deliveries.est) %>%
   group_by(agegrp) %>% 
   mutate(min_diff = min(est_diff), max_diff=max(est_diff),
          min_ratio = min(est_ratio), max_ratio=max(est_ratio),
          mean_ratio = mean(est_ratio),
-         Deliveries.corr = Deliveries.est/mean_ratio) %>% 
+         Deliveries.corr = Deliveries.est*mean_ratio) %>% 
   assign("Scot.births.corr", ., envir = .GlobalEnv) %T>% 
   {print(ggplot(data = .,aes(Year)) +
   geom_line(aes(y = Deliveries.rec, col = "Recorded deliveries")) +
@@ -134,16 +137,23 @@ Scot.births.ISD %>%
   facet_wrap(~agegrp))} %>% 
   head()
 
-# Old calculations - not accounting for greater rates as ageing through year
-# Scot.births %>%
-#   rowwise() %>% 
-#   mutate(Conceptions = (function(year, age)
-#   sum(0.25 * 0.25 * pull(Scot.births %>% filter(Age == age, Year == year) %>% select(Births)),
-#       0.25 * 0.75 * pull(Scot.births %>% filter(Age == age, Year == year+1) %>% select(Births)),
-#       0.75 * 0.25 * pull(Scot.births %>% filter(Age == age+1, Year == year) %>% select(Births)),
-#       0.75 * 0.75 * pull(Scot.births %>% filter(Age == age+1, Year == year+1) %>% select(Births)),
-#       na.rm = T)
-# )(Year, Age))
+#** Applying correction through lm predicting rec from est ---------------------
+
+Scot.births.corr %>% 
+  group_by(agegrp) %>% 
+  group_map(., function(x, ...) {
+    tibble(factor = summary(lm(Deliveries.rec ~  0 + Deliveries.est, data = x))[["coefficients"]][1],
+           Rsqr = summary(lm(Deliveries.rec ~ 0 + Deliveries.est, data = x))[["r.squared"]])
+  }
+    ) %>% 
+  right_join(Scot.births.corr, by = "agegrp") %>% 
+  mutate(Deliveries.corr2 = Deliveries.est*factor) %>% 
+  ggplot(data = .,aes(Year)) +
+  geom_line(aes(y = Deliveries.rec, col = "Recorded deliveries")) +
+  geom_line(aes(y = Deliveries.est, col = "Estimated deliveries")) +
+  geom_line(aes(y = Deliveries.corr2, col = "Corrected deliveries")) +
+  facet_wrap(~agegrp)
+
  
 sumScotBirths <- Scot.births.corr %>% 
   select(agegrp, mean_ratio) %>% 
