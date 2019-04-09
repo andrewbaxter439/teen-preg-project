@@ -36,6 +36,13 @@ constructCIRibbon <- function(newdata, model) {
 }
 
 
+printCoefficients <- function(model){
+  as_tibble(trimws(format(round(summary(model)$tTable, 3), nsmall=3))) %>%
+    mutate(Coefficient = rownames(summary(model)$tTable)) %>% 
+    select(Coefficient, Value, Std.Error, 'p-value') %>% 
+    print()
+}
+
 # all.UK.rates - Import conception rates for GBR countries -------------------------------------------
 
 all.UK.rates <-
@@ -133,7 +140,7 @@ EngData %>% ggplot(aes(x = Year, y = Value, group = Cat1)) +
   geom_smooth(method = "lm", se = FALSE)
 
 EngMod <- lm(Value ~ Time + Cat1 + Trend1, data = EngData)
-summary(EngMod)$coefficients
+summary(EngMod)
 
 # Test for autocorrelation
 
@@ -212,6 +219,29 @@ EngData %>%
   geom_vline(xintercept = 16.5,
              linetype = "dotted",
              col = "#000000CC")
+
+
+# EngModPI99_07 - phase-in with two interventions ------------------------------------------------------------
+
+lm(
+  Value ~ Time +
+    Cat1 +
+    Trend1 +
+    Cat2 +
+    Trend2,
+  data = {EngData %>% 
+      filter(Year < 1999 | Year > 2000) %>% 
+      mutate(Trend1=ifelse(Cat1==0,0,Trend1-2))}
+) %>%
+  assign("EngModPI_99_07", ., envir = .GlobalEnv) %T>%
+  {print(ggplot(data=eval(.$call$data), aes(
+    Year,
+    Value,
+    group = interaction(Cat1, Cat2)
+  )) +
+    geom_point() + geom_smooth(method = "lm", se = FALSE))
+  } %>%
+  summary()
 
 
 ## modScot99 - Comparing for pre-post 1999 --------------------------------------------
@@ -317,18 +347,7 @@ EngScotContro %>%
   coord_cartesian(ylim = c(0, 60)) +
   scale_y_continuous(expand = c(0, 0))
 
-## modScot07 ## Not used## Comparing for pre-post 2007 --------------
 
-
-  lm(Value ~ Time + England + Time_Eng + Cat2 + Trend2 + Cat2_Eng + Trend2_Eng,
-     data = EngScotContro) %>%
-  assign("modScot07", ., envir = .GlobalEnv) %T>%
-{  print(ggplot(eval(.$call$data), aes(
-    Year, Value, group = interaction(Country, Cat2), col = Country
-  )) +
-    geom_point() + geom_smooth(method = "lm", se=FALSE))
-} %>% 
-  summary()
 
 ## modScot99_07 - Comparing for three stages, split at 1999 and 2007 --------------------
 
@@ -381,7 +400,7 @@ modScot99_07_null <- gls(
   method = "ML"
 )
 
-summary(modScot99_07_null)
+str(summary(modScot99_07_null))
 
 confint(modScot99_07_null)
 

@@ -115,13 +115,6 @@ Scot.births.ISD <- read_xls("Downloaded data files/mat_tp_table4.xls", range = "
 
 #** Applying correction through mean ratio diffs ------------------
 
-Scot.births.ISD %>% 
-  gather("cat", "value", 2:7) %>% 
-  separate(cat, c("agegrp", "cat"), sep = "_") %>% 
-  spread(cat, value) %>% 
-  mutate(agegrp = factor(agegrp),
-         Deliveries = as.numeric(del)) %>%
-  left_join(Scot.births.adj, by=c("Year", "agegrp"), suffix = c(".rec", ".est")) %>% 
   mutate(est_diff = Deliveries.est-Deliveries.rec,
          est_ratio = Deliveries.rec/Deliveries.est) %>%
   group_by(agegrp) %>% 
@@ -139,33 +132,51 @@ Scot.births.ISD %>%
 
 #** Applying correction through lm predicting rec from est ---------------------
 
-Scot.births.corr %>% 
+Scot.births.ISD %>% 
+  gather("cat", "value", 2:7) %>% 
+  separate(cat, c("agegrp", "cat"), sep = "_") %>% 
+  spread(cat, value) %>% 
+  mutate(agegrp = factor(agegrp),
+         Deliveries = as.numeric(del)) %>%
+  left_join(Scot.births.adj, by=c("Year", "agegrp"), suffix = c(".rec", ".est")) %>% 
   group_by(agegrp) %>% 
-  group_map(., function(x, ...) {
-    tibble(factor = summary(lm(Deliveries.rec ~  0 + Deliveries.est, data = x))[["coefficients"]][1],
-           Rsqr = summary(lm(Deliveries.rec ~ 0 + Deliveries.est, data = x))[["r.squared"]])
-  }
+  group_map(., ~ tibble(factor = summary(lm(Deliveries.rec ~  0 + Deliveries.est, data = .))[["coefficients"]][1],
+           Rsqr = summary(lm(Deliveries.rec ~ 0 + Deliveries.est, data = .))[["r.squared"]])
     ) %>% 
   right_join(Scot.births.corr, by = "agegrp") %>% 
   mutate(Deliveries.corr2 = Deliveries.est*factor) %>% 
-  ggplot(data = .,aes(Year)) +
+  assign("Scot.births.corr", ., envir = .GlobalEnv) %T>% 
+  print({ggplot(data = .,aes(Year)) +
   geom_line(aes(y = Deliveries.rec, col = "Recorded deliveries")) +
   geom_line(aes(y = Deliveries.est, col = "Estimated deliveries")) +
   geom_line(aes(y = Deliveries.corr2, col = "Corrected deliveries")) +
-  facet_wrap(~agegrp)
+  facet_wrap(~agegrp)}) %>% 
+  head()
 
- 
+#** Check R^2 of each calculation type ---------------
+
+Scot.births.corr %>% 
+  group_by(agegrp) %>% 
+  summarise(Rsqr1 = (sum((Deliveries.rec-mean(Deliveries.rec))^2)-sum((Deliveries.rec - Deliveries.corr)^2))/sum((Deliveries.rec-mean(Deliveries.rec))^2),
+            Rsqr1b = (function(x, y) cor(x, y)^2)(Deliveries.rec, Deliveries.corr),
+            Rsqr2 = (sum((Deliveries.rec-mean(Deliveries.rec))^2)-sum((Deliveries.rec - Deliveries.corr2)^2))/sum((Deliveries.rec-mean(Deliveries.rec))^2),
+            Rsqr2b = (function(x, y) cor(x, y)^2)(Deliveries.rec, Deliveries.corr2))
+
+#** Sum births by age group ----------------------------- 
+
 sumScotBirths <- Scot.births.corr %>% 
-  select(agegrp, mean_ratio) %>% 
+  select(agegrp, factor) %>% 
   unique() %>% 
   inner_join(Scot.births.adj,., by = "agegrp") %>% 
   filter(Deliveries != 0) %>% 
-  mutate(Deliveries.corr = Deliveries / mean_ratio) #%>% 
+  mutate(Deliveries.corr = Deliveries * factor) #%>% 
   # ggplot(aes(Year)) +
   # geom_line(aes(y = Deliveries.corr, col = "Corrected deliveries")) +
   # geom_line(data = Scot.births.corr, aes(y = Deliveries.rec, col = "Recorded deliveries")) +
   # facet_wrap(~agegrp)
  
+#** Read in abortion data for under 20s ----------------------------------
+
 Scot.abort <- read_xlsx("Downloaded data files/mat_aas_table7.xlsx", skip=4) %>% 
   mutate(agegrp = "Under 20") %>% 
   select(
@@ -176,12 +187,19 @@ Scot.abort <- read_xlsx("Downloaded data files/mat_aas_table7.xlsx", skip=4) %>%
   na.omit() %>% 
   mutate(Year=as.numeric(gsub("(\\d\\d\\d\\d)(.*$)", "\\1", Year)))
 
-# sumScotBirths <- Scot.births %>%
-#   gather("Year", "Total",-1) %>%
-#   mutate(Year = as.numeric(Year)) %>%
-#   merge(birthAgeGrps) %>%
-#   group_by(Year, agegrp) %>%
-#   summarise(sumBirths = sum(Total)) # create summary
+# Correction factor for abortion rate (to account for abortions after turning 20)
+
+Scot.data <- read_xlsx("Downloaded data files/AllUK1994-2016.xlsx", sheet = "scot_agegrp")
+
+ab20.correction <- Scot.abort %>% 
+  left_join(Scot.data, by=c("Year", "agegrp")) %>% 
+  select(Year, Abortions.x, Abortions.y) %>% 
+  filter(!is.na(Abortions.y)) %>% 
+  summarise(factor = summary(lm(Abortions.y ~ 0 + Abortions.x, data=.))[["coefficients"]][1]) %>% 
+  pull()
+
+Scot.abort <- Scot.abort %>% 
+  mutate(Abortions.corr = Abortions * ab20.correction)
 
 # merge with population to create rates for under-20s -------------------------------------------------------
 
@@ -189,7 +207,7 @@ scotConceptionsUnde20 <- sumScotBirths %>%
   filter(agegrp == "Under 20") %>% 
   select(Year, agegrp, Births = Deliveries.corr) %>% 
   left_join(Scot.abort) %>% 
-  mutate(Total = Births + Abortions) %>% 
+  mutate(Total = Births + Abortions.corr) %>% 
   left_join(sumScot.pop) %>% 
   mutate(Value = 1000*Total/Population)
 
@@ -197,3 +215,19 @@ write_csv(scotConceptionsUnde20, "EstScot_1985_2015.csv")
 
 
 
+# England and Wales rates ------------------------------------------------------------------------------------
+
+years <- tibble(Year = 1985:2016)
+countries <- tibble(Country = c("England", "Wales", "England and Wales"))
+agegrps <- tibble(agegrp = c("Under 16", "Under 18", "Under 20"))
+
+emptySet <- merge(years, countries) %>% merge(agegrps)
+initialSet <- read_xlsx("Downloaded data files/EngWalConceptions1998-2015.xlsx", sheet = "by_agegrp") %>% 
+  mutate(Year = as.numeric(Year))
+
+initialSet %>% 
+  select(1:4) %>% 
+  spread(Country, Conceptions) %>% 
+  arrange(desc(Year))
+
+emptySet %>% anti_join(initialSet, by=c("Year", "agegrp", "Country"))
