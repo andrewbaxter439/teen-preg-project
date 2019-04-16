@@ -92,7 +92,7 @@ cl <- makeCluster(cores[1]-1) #not to overload your computer
 registerDoParallel(cl)
 registerDoSEQ()
 
-allpopsroot <- foreach(Code=unique(teenbirths$Code), .combine=rbind) %dopar% {
+allpopsroot <- foreach(Code=unique(teenBirths$Code), .combine=rbind) %dopar% {
   readpop(Code)
 }
 
@@ -116,6 +116,8 @@ allpops <- allpopsroot %>%
   mutate(Year=2001, Code="POL") %>%
   right_join(allpops)
 
+write_csv(allpops, "Downloaded data files/HMD_allpops")
+
 
 # Grouping births and populations ----------------------------------------------------------------------------
 
@@ -138,8 +140,6 @@ sumPops <- allpops %>%
   summarise(sumPops = sum(Female)) # create summary
 
 # Combine pop and births and calculate rates ------------------------------
-# have included age 12 births here
-# - check ONS guidlines and methods and report appropriately
 
 
 birthRates <-left_join(sumBirths, sumPops,
@@ -147,6 +147,7 @@ birthRates <-left_join(sumBirths, sumPops,
   filter(Year>1984, Country %in% country_names) %>%
   mutate(rate=1000*sumBirths/sumPops)
 
+write_csv(birthRates, "Downloaded data files/HFD_calc_births.csv")
 
 # Graphs of all -----------------------------------------------------
 
@@ -161,6 +162,46 @@ birthRates %>%
                  fun.y=mean, geom="line", size=1.5, col="steelblue") +
   labs(y = "Rate of births per 1000 girls")
 
+
+birthRates %>%
+  filter(Country!="United Kingdom"& Country!="Bulgaria", agegrp == "Under 18") %>% # Scot/EngWa/NI seperate, BUL outlier
+  na.omit() %>% 
+  ggplot(aes(x=Year, y=rate, col=Country, group=Country)) +
+    geom_line() +
+   xlim(1985,2016) +
+    theme_minimal() +
+  theme(axis.title.y = element_text(margin = margin(0,10,0,0)))+
+    stat_summary(aes(col=NULL, group=NULL),
+                 fun.y=mean, geom="line", size=1.5, col="steelblue") +
+  labs(y = "Rate of births per 1000 girls")
+
+ymax <- birthRates %>% 
+  filter(Country != "Bulgaria") %>% 
+  group_by(agegrp) %>% 
+  summarise(ymax = max(rate, na.rm = TRUE)) %>% 
+  pull()
+
+birthanim <- birthRates %>%
+  filter(Country!="United Kingdom"& Country!="Bulgaria") %>% # Scot/EngWa/NI seperate, BUL outlier
+  na.omit() %>% 
+  ggplot(aes(x=Year, y=rate, col=Country, group=Country)) +
+  geom_line() +
+  xlim(1985,2016) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 1, face = "bold"),
+        axis.title.y = element_text(margin = margin(0,10,0,0)))+
+  # facet_wrap(~agegrp) +
+  stat_summary(aes(col=NULL, group=NULL),
+               fun.y=mean, geom="line", size=1.5, col="steelblue") +
+  labs(title = "{closest_state}", y = "Rate of births per 1000 girls") +
+  transition_states(agegrp) +
+  view_follow(fixed_x = TRUE) +
+  # view_step_manual(ymax = ymax, ymin = c(0,0,0), xmin = 1985, xmax = 2016, fixed_x = TRUE, ease = "sine") +
+  # view_zoom_manual(ymax = ymax, ymin = c(0,0,0), xmin = 1985, xmax = 2016, fixed_x = TRUE, ease = "linear") +
+  ease_aes("sine-in-out")
+
+
+animate(birthanim, fps = 15, duration = 10, height = 400, width = 800)
 
 ### Scotland filer and graph to trial data - not used -------------
 
