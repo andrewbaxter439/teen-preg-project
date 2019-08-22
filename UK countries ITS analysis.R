@@ -126,10 +126,12 @@ all.UK.rates %>% filter(Country == "Scotland" |
       x = Year,
       y = Value,
       group = interaction(Category, Country),
-      col = Country
+      col = Country,
+      fill = Country
     )) +
       geom_point() +
-      geom_smooth(method = "lm")
+      geom_smooth(method = "lm") +
+      theme_sphsu_light()
   }
 
 # EngMod - England data in ITS with break at 1999 ------------------------------------------------------------
@@ -374,7 +376,7 @@ lm(
       group = interaction(Country, Cat1, Cat2),
       col = Country
     )) +
-      geom_point() + geom_smooth(method = "lm", se = FALSE))
+      geom_point() + geom_smooth(method = "lm", se = FALSE) + bbc_style())
   } %>%
   summary()
 
@@ -383,7 +385,7 @@ testAutocorr(modScot99_07)  # Assume NULL for now
 
 #** New model -----
 
-modScot99_07_null <- gls(
+modScot99_07_q1 <- gls(
   Value ~ Time +
     England +
     Time_Eng +
@@ -396,11 +398,11 @@ modScot99_07_null <- gls(
     Cat2_Eng +
     Trend2_Eng,
   data = EngScotContro,
-  correlation = NULL,
+  correlation = corARMA(p = 1, form = ~Time|England),
   method = "ML"
 )
 
-str(summary(modScot99_07_null))
+summary(modScot99_07_null)
 
 confint(modScot99_07_null)
 
@@ -419,7 +421,7 @@ modScot99_07_null_cfac <-
 
 #** Graphing final model -----
 
-EngScotContro %>%
+Scot99_07_graph <- EngScotContro %>%
   left_join(constructCIRibbon((filter(., England==1, Year>1998)), modScot99_07_null)) %>%  # England CI ribbon
   mutate(Predict = predict(modScot99_07_null)) %>%  # Add Predicts for non-England
   ggplot(aes(
@@ -497,7 +499,10 @@ EngScotContro %>%
                "Scotland" = "#0072C6",
                "England" = "#CF142B",
                "Control" = "#F7D917"),
-    aesthetics = c("colour", "fill"))
+    aesthetics = c("colour", "fill")) +
+  bbc_style() +
+  labs(title = "Comparing English and Scottish pregnancy rates", 
+       subtitle = "Under-18 pregnancies; yellow counter-factuals modelling Scottish changes on England data")
 
 ggsave("graphs/Scot99_07.png")
 
