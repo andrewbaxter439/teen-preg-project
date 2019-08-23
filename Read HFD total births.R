@@ -87,9 +87,7 @@ readpop <- function(code) {
 #  assign(paste(code,"_pop", sep=""), pop, .GlobalEnv)
 }
 
-# Method 1: parallel cores
-
-cores <- detectCores()
+cores=detectCores()
 cl <- makeCluster(cores[1]-1) #not to overload your computer
 registerDoParallel(cl)
 registerDoSEQ()
@@ -98,11 +96,7 @@ allpopsroot <- foreach(Code=unique(teenBirths$Code), .combine=rbind) %dopar% {
   readpop(Code)
 }
 
-# Method 2: apply
-
-allpopsroot <- lapply(unique(teenBirths$Code), readpop)
-
-# Standardise Germany labels - combining east/west pre-1990---------------
+# Standardise Germany labels - combining east/west pre-1990
 
 allpops <- allpopsroot %>%
   filter(Year<1990, str_detect(Code, "DEU")) %>%

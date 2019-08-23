@@ -1,50 +1,4 @@
-extractWB <- function(name) {
-  
-  require(readxl)
-  require(dplyr)
-  require(tidyr)
-  
-  country_names <-
-    c(
-      "Austria",
-      "Australia",
-      "Belgium",
-      "Bulgaria",
-      "Canada",
-      "Croatia",
-      "Cyprus",
-      "Czechia",
-      "Denmark",
-      "Estonia",
-      "Finland",
-      "France",
-      "Germany",
-      "Greece",
-      "Hungary",
-      "Iceland",
-      "Ireland",
-      "Italy",
-      "Latvia",
-      "Lithuania",
-      "Luxembourg",
-      "Malta",
-      "Netherlands",
-      "New Zealand",
-      "Norway",
-      "Poland",
-      "Portugal",
-      "Romania",
-      "Slovak Republic",
-      "Slovenia",
-      "Spain",
-      "Sweden",
-      "Switzerland",
-      "United Kingdom",
-      "Scotland",
-      "England and Wales",
-      "Northern Ireland",
-      "United States of America"
-    )
+name <- "Education Expenditure"
 
 df <- read_xls(paste0("Downloaded data files/", name, ".xls"), sheet = "Data", skip = 3)
 
@@ -64,31 +18,13 @@ names(dfTidy)[names(dfTidy)=="col"] <- name
 
 assign(paste0(name), dfTidy, envir = .GlobalEnv)
 
-}
+
+dfTidy %>% filter(Country=="United Kingdom") %>% pull(`Education Expenditure`) -> EE
+dfTidy %>% filter(Country=="United Kingdom") %>% pull(Year) -> Yr
 
 
-`Education Expenditure` %>% filter(Country=="United Kingdom") %>% pull(`Education Expenditure`) -> EE
-`Education Expenditure` %>% filter(Country=="United Kingdom") %>% pull(Year) -> Yr
+approx(Yr, EE, n = length(Yr), rule = 2)
 
+$y -> predEE
 
-# approx(Yr, EE, xout = Yr[which(is.na(EE))], n = length(Yr), rule = 2) -> predEE
-approx(Yr, EE, xout = 1985:2017, n = length(Yr), rule = 2) -> predEE
-
-EEcomplete <- tibble(Yr, EE, predict = predEE$y)
-
-# tibble(Yr, EE) %>% 
-#   filter(!is.na(EE)) %>% 
-#   bind_rows(tibble(Yr = predEE$x, EE = predEE$y)) %>% 
-#   arrange(Yr)
-
-
-# UK data across countries -----------------------------------------------------------------------------------
-
-synthData[synthData$Code=="GBR_NIR",c("GDPperCap", "MobilePhones", "UrbanPop")] <- 
-  synthData[synthData$Code=="GBR_NP",c("GDPperCap", "MobilePhones", "UrbanPop")]
-
-synthData[synthData$Code=="GBR_SCO",c("GDPperCap", "MobilePhones", "UrbanPop")] <- 
-  synthData[synthData$Code=="GBR_NP",c("GDPperCap", "MobilePhones", "UrbanPop")]
-
-synthData[synthData$Code=="GBRTENW",c("GDPperCap", "MobilePhones", "UrbanPop")] <- 
-  synthData[synthData$Code=="GBR_NP",c("GDPperCap", "MobilePhones", "UrbanPop")]
+tibble(Yr, EE, predEE)
