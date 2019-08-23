@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+/model outputs
 /graphs
 /Downloaded data files
 !Downloaded data files/mat_aas_table7.xlsx
@@ -11,3 +12,4 @@ Initial_ITS_models.*
 ITS_template.docx
 style.css
 *.svg
+*.Rhistory
