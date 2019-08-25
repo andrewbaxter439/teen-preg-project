@@ -324,7 +324,7 @@ md_rate %>% spread(Group, Rate) %>%
 
 # **** Model 1b: Rate special predictors -------------------------------------------------
 
-dp_rateSp <- dataprep(
+dp_U18_rateSp <- dataprep(
   foo = synthData_U18 %>% filter(Year< 2014),
   special.predictors = list(
     list("rate", 1985:1989, "mean"),
@@ -343,13 +343,15 @@ dp_rateSp <- dataprep(
   time.plot = 1985:2013
 )
 
-md_rateSp <- predvalues_synth(dp_rateSp)
+md_U18_rateSp <- predvalues_synth(dp_U18_rateSp)
 
 # so_rateSp <- synth(dp_rateSp)
 # st_rateSp <- synth.tab(so_rateSp, dp_rateSp)  
 
 
-gg_synth(md = md_rateSp)
+gg_synth(md = md_U18_rateSp, post = TRUE)
+
+ggsave("graphs/Under-18 rates - inc Scot+NI - no pred.png")
 
 # gr_rateSp <- md_rateSp %>% 
 #   ggplot(aes(Year, Rate, col = Group, linetype = Group)) +
@@ -537,16 +539,19 @@ synthData_U20 <- synth_data_interp_ab %>%
   filter(agegrp == "Under 20") %>% 
   select(Code, Country, Year, GDPperCap, pRate) %>% 
   filter(!Country %in% c("United Kingdom", "Austria", "Croatia", "Canada", "Northern Ireland", "Bulgaria"),
-         Year > 1989,
+         Year > 1984,
          Year < 2014) %>% 
   mutate(Code = as.numeric(factor(Code, ordered = TRUE))) %>% 
   arrange(Code)
 
 
 # filling in missing data
-synthData_U20[418, 'pRate'] <- mean(synthData_U20[[417, 'pRate']], synthData_U20[[419, 'pRate']])
-synthData_U20[193:196, 'pRate'] <- read_csv("Downloaded data files/EstScot_1985_2015.csv") %>%
-  filter(Year > 1989, Year < 1994) %>% 
+synthData_U20[synthData_U20$Country == "Poland" & synthData_U20$Year == 2001, 'pRate'] <- 
+  mean(synthData_U20[[which(synthData_U20$Country == "Poland" & synthData_U20$Year == 2000), 'pRate']],
+       synthData_U20[[which(synthData_U20$Country == "Poland" & synthData_U20$Year == 2002), 'pRate']])
+
+synthData_U20[synthData_U20$Country == "Scotland" & synthData_U20$Year %in% 1985:1993, 'pRate'] <- read_csv("Downloaded data files/EstScot_1985_2015.csv") %>%
+  filter(Year > 1984, Year < 1994) %>% 
   select(Value) %>% 
   pull()
 

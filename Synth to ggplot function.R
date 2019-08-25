@@ -7,16 +7,22 @@ gg_synth <- function(dp = NULL, md = NULL, yr = 1999, post = FALSE) {
   require(SPHSUgraphs)
   require(Synth)
   
+  
   if ((is.null(dp)&&is.null(md))|(!is.null(dp)&&!is.null(md)))
     stop("Please enter either dataprep object or model")
   
   if (is.null(md)&&!is.null(dp)) {
+    
+  agegrp <- gsub("^.*(\\d{2}).*$","\\1", deparse(substitute(dp)))
   so <- synth(dp)
   synthC <- dp$Y0 %*% so$solution.w
   
   md <- tibble(Year = as.numeric(rownames(dp$Y1)), Treated = dp$Y1[,1], Synthetic = synthC[,1]) %>% 
     gather("Group", "Rate", -1)
   
+  } else {
+    
+  agegrp <- gsub("^.*(\\d{2}).*$","\\1", deparse(substitute(md)))
   }
   
   if(post){
@@ -26,12 +32,13 @@ gg_synth <- function(dp = NULL, md = NULL, yr = 1999, post = FALSE) {
     md <- md %>% filter(Year<yr)
   }
   
+  
   mspe <- signif(pre_MSPE(md), 3)
   
   plot <-  ggplot(md, aes(Year, Rate, col = Group, linetype = Group)) +
     geom_line(size = 1.5) +
     theme_sphsu_light() +
-    ylab("Under-20 pregnancy rate (per 1,000 women)") +
+    ylab(paste0("Under-", agegrp, " rate (per 1,000 women)")) +
     theme(legend.title = element_blank(),
           panel.grid = element_blank(),
           axis.line = element_blank()) +
@@ -39,7 +46,7 @@ gg_synth <- function(dp = NULL, md = NULL, yr = 1999, post = FALSE) {
     scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
     geom_vline(xintercept = 1998.5, linetype = "dotted") +
     scale_x_continuous(limits = c(NA, xmax)) +
-    labs(subtitle = paste0("MSPE = ", mspe))
+    labs(subtitle = paste0("Pre-intervention MSPE = ", mspe))
   
   print(plot)
   return(plot)
