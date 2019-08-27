@@ -2,7 +2,7 @@
 # so = synth.res (output from `synth` function)
 # dp = dataprep.res (output from `dataprep` function)
 
-gg_synth <- function(dp = NULL, md = NULL, yr = 1999, post = FALSE) {
+gg_synth <- function(dp = NULL, md = NULL, yr = 1999, post = FALSE, mspe = NULL) {
   require(dplyr)
   require(SPHSUgraphs)
   require(Synth)
@@ -20,6 +20,8 @@ gg_synth <- function(dp = NULL, md = NULL, yr = 1999, post = FALSE) {
   md <- tibble(Year = as.numeric(rownames(dp$Y1)), Treated = dp$Y1[,1], Synthetic = synthC[,1]) %>% 
     gather("Group", "Rate", -1)
   
+  mspe <- so$loss.v[1]
+  
   } else {
     
   agegrp <- gsub("^.*(\\d{2}).*$","\\1", deparse(substitute(md)))
@@ -32,8 +34,8 @@ gg_synth <- function(dp = NULL, md = NULL, yr = 1999, post = FALSE) {
     md <- md %>% filter(Year<yr)
   }
   
+  mspe <- signif(mspe, 3)
   
-  mspe <- signif(pre_MSPE(md), 3)
   
   plot <-  ggplot(md, aes(Year, Rate, col = Group, linetype = Group)) +
     geom_line(size = 1.5) +
@@ -47,17 +49,16 @@ gg_synth <- function(dp = NULL, md = NULL, yr = 1999, post = FALSE) {
     geom_vline(xintercept = 1998.5, linetype = "dotted") +
     scale_x_continuous(limits = c(NA, xmax)) +
     labs(subtitle = paste0("Pre-intervention MSPE = ", mspe))
-  
-  print(plot)
+
   return(plot)
   
 }
 
-predvalues_synth <- function(dp, synth_outputs = TRUE, yr = 1999) {
+predvalues_synth <- function(dp, synth_outputs = TRUE, yr = 1999, ...) {
   require(dplyr)
   require(Synth)
   
-so <- synth(dp)
+so <- synth(dp, ...)
   synthC <- dp$Y0 %*% so$solution.w
   
   if (synth_outputs){
@@ -107,8 +108,17 @@ printCoefficients <- function(md = NULL, model = NULL){
     print()
 }
 
-generatePlacebos <- function(data, predictors = NULL, special.predictors = NULL, time.optimize.ssr = 1990:1998, time.plot = 1985:2013) {
+generatePlacebos <- function(data,
+                             predictors = NULL,
+                             special.predictors = NULL, 
+                             time.optimize.ssr = 1990:1998,
+                             time.plot = 1985:2013, 
+                             dependent = "rate", 
+                             ...) {
 
+  data <- data.frame(data %>% 
+                       filter(Country != "England and Wales"))
+  
   ccodes <- data %>% 
     select(Code, Country) %>% 
     unique()
@@ -122,8 +132,8 @@ generatePlacebos <- function(data, predictors = NULL, special.predictors = NULL,
     predictors = predictors,
     predictors.op = "mean",
     special.predictors = special.predictors,
-    time.predictors.prior = 1985:1998,
-    dependent = "rate",
+    time.predictors.prior = time.plot[1]:1998,
+    dependent = dependent,
     unit.variable = "Code",
     unit.names.variable = "Country",
     time.variable = "Year",
@@ -133,8 +143,15 @@ generatePlacebos <- function(data, predictors = NULL, special.predictors = NULL,
     time.plot = time.plot
   )
     
-    md <- predvalues_synth(dp, FALSE) 
-    mspe <- pre_MSPE(md)
+    # md <- predvalues_synth(dp, FALSE, ...) 
+    # mspe <- pre_MSPE(md)
+    so <- synth(dp, ...)
+    synthC <- dp$Y0 %*% so$solution.w
+    
+    md <- tibble(Year = as.numeric(rownames(dp$Y1)), Treated = dp$Y1[,1], Synthetic = synthC[,1]) %>% 
+      gather("Group", "Rate", -1)
+    
+    mspe <- so$loss.v
     
     gaps <- md %>%
       spread(Group, Rate) %>% 
@@ -157,5 +174,13 @@ pre_MSPE <- function (md){
     mutate(SPE = (Treated - Synthetic)**2) %>% 
     summarise(MSPE = mean(SPE)) %>% 
     pull()
+}
+
+sPredText <- function(dp) {
+  paste("Prediction periods:",
+  map(dp$tag$special.predictors, pluck(2)) %>% 
+    map(function(x) paste0(min(x), "-", max(x))) %>% 
+    str_flatten(collapse = "; ")
+  )
 }
 

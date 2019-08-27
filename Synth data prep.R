@@ -8,6 +8,7 @@ library(Rcpp)
 library(purrr)
 library(svglite)
 library(SPHSUgraphs)
+`-.gg` <- function(e1, e2) e2(e1)
 
 # data import ------------------------------------------------------------------------------------------------
 
@@ -349,21 +350,13 @@ md_U18_rateSp <- predvalues_synth(dp_U18_rateSp)
 # st_rateSp <- synth.tab(so_rateSp, dp_rateSp)  
 
 
-gg_synth(md = md_U18_rateSp, post = TRUE)
+gr_U18_rateSP <- gg_synth(md = md_U18_rateSp, post = TRUE) 
+
+
+gr_U18_rateSP + labs(title = sPredText(dp_U18_rateSp))
 
 ggsave("graphs/Under-18 rates - inc Scot+NI - no pred.png")
 
-# gr_rateSp <- md_rateSp %>% 
-#   ggplot(aes(Year, Rate, col = Group, linetype = Group)) +
-#   geom_line(size = 1.5) +
-#   theme_sphsu_light() +
-#   ylab("Under-18 birth rate (per 1,000 women)") +
-#   theme(legend.title = element_blank(),
-#         panel.grid = element_blank(),
-#         axis.line = element_blank()) +
-#   scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +
-#   scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
-#   geom_vline(xintercept = 1998.5, linetype = "dotted")
 
 printCoefficients(md_rateSp)
 
@@ -385,11 +378,74 @@ md_rateSp %>%
   theme_minimal() +
   geom_vline(xintercept = 1998.5, linetype = "dotted")
 
-export::graph2ppt(gr_rateSp, "Under-18 birth rates.pptx", height = 6, width = 9.5)
 
 st_rateSp$tab.v
 st_rateSp$tab.w
 st_rateSp$tab.pred
+
+
+# **** Model 1b.2: Rate special predictors optim -------------------------------------------------
+
+dp_U18_rateSp.2 <- dataprep(
+  foo = synthData_U18 %>% filter(Year< 2014),
+  special.predictors = list(
+    list("rate", 1985:1987, "mean"),
+    list("rate", 1988:1990, "mean"),
+    list("rate", 1991:1993, "mean"),
+    list("rate", 1994:1998, "mean")
+    ),
+  predictors.op = "mean",
+  time.predictors.prior = 1985:1998,
+  dependent = "rate",
+  unit.variable = "Code",
+  unit.names.variable = "Country",
+  time.variable = "Year",
+  treatment.identifier = "England and Wales",
+  controls.identifier = controls,
+  time.optimize.ssr = 1990:1998,
+  time.plot = 1985:2013
+)
+
+md_U18_rateSp.2 <- predvalues_synth(dp_U18_rateSp.2)
+
+
+
+mspe_limit_U18_rateSp.2 <- so_U18_rateSp.2$loss.v[1]
+
+gr_U18_rateSP.2 <- gg_synth(md = md_U18_rateSp.2, post = TRUE, mspe = mspe_limit_U18_rateSp.2) 
+
+
+gr_U18_rateSP.2 + labs(title = sPredText(dp_U18_rateSp.2))
+
+ggsave("graphs/Under-18 rates - inc Scot+NI - no pred.png")
+
+
+printCoefficients(md_rateSp.2)
+
+pl_u18_rateSp.2 <- generatePlacebos(synthData_U18 %>% filter(Year<2014),   special.predictors = list(
+  list("rate", 1985:1987, "mean"),
+  list("rate", 1988:1990, "mean"),
+  list("rate", 1991:1993, "mean"),
+  list("rate", 1994:1998, "mean")
+),
+)
+
+
+md_U18_rateSp.2 %>% 
+  spread(Group, Rate) %>% 
+  mutate(Gap = Treated - Synthetic) %>% 
+  ggplot(aes(Year, Gap)) +
+  geom_line(data = pl_u18_rateSp.2 %>% filter(pre_mspe < 5*mspe_limit_U18_rateSp.2), aes(group = Country), col = "grey") +
+  geom_line(col = sphsu_cols("Thistle", names = FALSE), size = 2) +
+  theme_minimal() +
+  geom_vline(xintercept = 1998.5, linetype = "dotted") +
+  labs(title = sPredText(dp_U18_rateSp.2), subtitle = paste0("MSPE pre-intervention: ", round(mspe_limit_U18_rateSp.2, 3), " (controls <5*MSPE)"))
+
+ggsave("graphs/Under-18 rates - inc Scot+NI - placebo test.png")
+
+st_U18_rateSp.2$tab.v
+st_U18_rateSp.2$tab.w
+st_U18_rateSp.2$tab.pred
 
 
 # **** Model 1c: rates relative to 1985 --------------------------------------------------------------------
@@ -445,6 +501,102 @@ export::graph2ppt(gr_relative, "Under-18 birth rates relative to 1985.pptx", hei
 st_relative$tab.v
 st_relative$tab.w
 st_relative$tab.pred
+
+
+# **** Model 1d: Rate special predictors - No Scotland -------------------------------------------------
+
+dp_U18_noScot <- dataprep(
+  foo = synthData_U18 %>% filter(Year< 2014),
+  special.predictors = list(
+    list("rate", 1985:1989, "mean"),
+    list("rate", 1990:1993, "mean"),
+    list("rate", 1994:1995, "mean"),
+    list("rate", 1996:1998, "mean")
+    ),
+  predictors.op = "mean",
+  time.predictors.prior = 1985:1998,
+  dependent = "rate",
+  unit.variable = "Code",
+  unit.names.variable = "Country",
+  time.variable = "Year",
+  treatment.identifier = u_18_ccodes[u_18_ccodes$Country=="England and Wales", "Code"],
+  controls.identifier = u_18_ccodes[u_18_ccodes$Country!="England and Wales"&u_18_ccodes$Country!="Scotland", "Code"],
+  time.optimize.ssr = 1985:1998,
+  time.plot = 1985:2013
+)
+
+md_U18_noScot <- predvalues_synth(dp_U18_noScot)
+
+gg_synth(md = md_U18_noScot) + labs(title = sPredText(dp_U18_noScot))
+
+st_U18_noScot$tab.w
+st_U18_noScot$tab.v
+st_U18_noScot$tab.pred
+
+
+gr_U18_noScot <- gg_synth(md = md_U18_noScot, post = TRUE)
+
+gr_U18_noScot + labs(title = sPredText(dp_U18_noScot))
+
+
+ggsave("graphs/Under-18 rates - excl Scot - no pred.png")
+
+
+
+
+# **** Model 1e: Rate special predictors - no Scotland/NI ----------------------------------------------
+
+dp_U18_noScotNI <- dataprep(
+  foo = synthData_U18 %>% filter(Year< 2014),
+  special.predictors = sp_U18_noScotNI,
+  predictors.op = "mean",
+  time.predictors.prior = 1985:1998,
+  dependent = "rate",
+  unit.variable = "Code",
+  unit.names.variable = "Country",
+  time.variable = "Year",
+  treatment.identifier = u_18_ccodes[u_18_ccodes$Country=="England and Wales", "Code"],
+  controls.identifier = u_18_ccodes[u_18_ccodes$Country!="England and Wales"&u_18_ccodes$Country!="Scotland"&u_18_ccodes$Country!="Northern Ireland", "Code"],
+  time.optimize.ssr = 1990:1998,
+  time.plot = 1985:2013
+)
+
+md_U18_noScotNI <- predvalues_synth(dp_U18_noScotNI)
+
+
+
+gr_U18_noScotNI <- gg_synth(md = md_U18_noScotNI, post = TRUE, mspe = mspe_limit_U18_noScotNI)
+
+gr_U18_noScotNI +
+  labs(title = sPredText(dp_U18_noScotNI))
+  
+
+st_U18_noScotNI$tab.w
+st_U18_noScotNI$tab.v
+st_U18_noScotNI$tab.pred
+
+ggsave("graphs/Under-18 rates - excl Scot-NI - no pred.png")
+
+
+
+printCoefficients(md_noScotNI)
+
+pl_u18_noScotNI <- generatePlacebos(synthData_U18 %>% filter(Year<2014),   special.predictors = sp_U18_noScotNI
+)
+
+mspe_limit_U18_noScotNI <- so_U18_noScotNI$loss.v[1,1]
+
+md_U18_noScotNI %>% 
+  spread(Group, Rate) %>% 
+  mutate(Gap = Treated - Synthetic) %>% 
+  ggplot(aes(Year, Gap)) +
+  geom_line(data = pl_u18_noScotNI %>% filter(pre_mspe < (5*mspe_limit_U18_noScotNI)), aes(group = Country), col = "grey") +
+  geom_line(col = sphsu_cols("Thistle", names = FALSE), size = 2) +
+  theme_minimal() +
+  geom_vline(xintercept = 1998.5, linetype = "dotted") +
+  labs(title = sPredText(dp_U18_rateSp.2), subtitle = paste0("MSPE pre-intervention: ", round(mspe_limit_U18_rateSp.2, 3), " (controls <5*MSPE)"))
+
+ggsave("graphs/Under-18 rates - No scot+NI - placebo test.png")
 
 
 # ** Model 2: add in GDPperCap -------------------------------------------------------------------------------
@@ -559,7 +711,8 @@ synthData_U20 <- bind_rows(synthData_U20,
   tibble(Code = 17, 
                    Country = "New Zealand", 
                    Year = 1990:1991, 
-                   pRate = synthData_U20[[385, 'pRate']])
+                   pRate = synthData_U20[[which(synthData_U20$Country=="New Zealand" &
+                                                  synthData_U20$Year == 1992), 'pRate']])
 )
 
 synthData_U20 <- synthData_U20 %>%
@@ -577,32 +730,36 @@ controls_U20 <- synthData_U20 %>%
   unique() %>% 
   pull()
 
-synthData_U20 %>% ggplot(aes(Year, pRate, col = Country)) + geom_line(size = 2) + scale_colour_sphsu()
+u_20_codes <- synthData_U20 %>% 
+  select(Country, Code) %>% 
+  unique()
+
+synthData_U20 %>% ggplot(aes(Year, pRate, col = Country)) + geom_line(size = 2) + scale_colour_sphsu() - ggplotly
 
 # ** U20 basic synth -----------------------------------------------------------------------------------
 
 dp_u20_scot <- dataprep(
-  foo = data.frame(synthData_U20),
-  # predictors = c("pRate"),
-  special.predictors = list(
-    list("pRate", 1990:1995, "mean"),
-    list("pRate", 1996:1998, "mean")
-  ),
+  foo = data.frame(synthData_U20 %>% filter(Year > 1989)),
+  predictors = c("pRate"),
+  # special.predictors = list(
+  #   list("pRate", 1990:1995, "mean"),
+  #   list("pRate", 1996:1998, "mean")
+  # ),
   predictors.op = "mean",
   time.predictors.prior = 1990:1998,
   dependent = "pRate",
   unit.variable = "Code",
   unit.names.variable = "Country",
   time.variable = "Year",
-  treatment.identifier = "England and Wales",
-  controls.identifier = controls_U20,
-  time.optimize.ssr = 1996:1998,
+  treatment.identifier = u_20_codes$Code[u_20_codes$Country =="England and Wales"],
+  controls.identifier = u_20_codes$Code[u_20_codes$Country !="England and Wales"],
+  time.optimize.ssr = 1990:1998,
   time.plot = 1990:2013
 )
 
-so_u20_scot <- synth(dp_u20_scot)  # synth output
 
 md_u20_scot <- predvalues_synth(dp_u20_scot)
+gg_synth(md = md_u20_scot)
 
 (gr_u20_scot <- md_u20_scot %>% 
     ggplot(aes(Year, Rate, col = Group, linetype = Group)) +
@@ -624,6 +781,57 @@ st_u20_scot <- synth.tab(so_u20_scot, dp_u20_scot)  # summarising results
 st_u20_scot$tab.w  # weight
 st_u20_scot$tab.v  # weight
 
+
+# ** U20 special predictors synth -----------------------------------------------------------------------------------
+
+it_U20_sp <- testSynthInterations(Margin.ipop=.005, Sigf.ipop=7, Bound.ipop=6)
+it_U20_sp %>% ggplot(aes(iteration, mspe, col = factor(groups))) + geom_point()
+it_U20_sp %>% filter(groups == 3) %>% arrange(mspe)
+sp_U20_Sp <- it_U20_sp$sPred[it_U20_sp$iteration==19][[1]]
+
+dp_u20_sp <- dataprep(
+  foo = data.frame(synthData_U20 %>% filter(Year > 1989)),
+  special.predictors = sp_U20_Sp,
+  predictors.op = "mean",
+  time.predictors.prior = 1990:1998,
+  dependent = "pRate",
+  unit.variable = "Code",
+  unit.names.variable = "Country",
+  time.variable = "Year",
+  treatment.identifier = u_20_codes$Code[u_20_codes$Country =="England and Wales"],
+  controls.identifier = u_20_codes$Code[u_20_codes$Country !="England and Wales"],
+  time.optimize.ssr = 1990:1998,
+  time.plot = 1990:2013
+)
+
+
+md_u20_sp <- predvalues_synth(dp_u20_sp)
+gr_U20_sp <- gg_synth(md = md_u20_sp, post = TRUE, mspe = mspe_limit_u20_sp)
+
+gr_U20_sp + labs(title = sPredText(dp_u20_sp))
+
+ggsave("graphs/Under 20 pregnancy rates - special predictors.png")  
+
+# export::graph2ppt(gr_u20_sp, "graphs/Under 20 pregnancy rates - special predictors.ppt", height = 6, width = 9.5)
+
+st_u20_sp$tab.w  # weight
+st_u20_sp$tab.v  # weight
+
+mspe_limit_u20_sp <- so_u20_sp$loss.v[1]
+  
+pl_U20_sp <- generatePlacebos(synthData_U20 %>% filter(Year>1989), time.plot = 1990:2013, special.predictors = sp_U20_Sp, dependent = "pRate")
+
+md_u20_sp %>% 
+  spread(Group, Rate) %>% 
+  mutate(Gap = Treated - Synthetic) %>% 
+  ggplot(aes(Year, Gap)) +
+  geom_line(data = pl_U20_sp %>% filter(pre_mspe < 5*mspe_limit_u20_sp), aes(group = Country), col = "grey") +
+  geom_line(col = sphsu_cols("Thistle", names = FALSE), size = 2) +
+  theme_minimal() +
+  geom_vline(xintercept = 1998.5, linetype = "dotted") +
+  labs(title = sPredText(dp_u20_sp), subtitle = paste0("MSPE pre-intervention: ", round(mspe_limit_u20_sp, 3), " (controls <5*MSPE)"))
+
+ggsave("graphs/Under-20 rates - inc Scot+NI - placebo test.png")
 
 # ** U20 basic synth excluding Scotland -----------------------------------------------------------------------------------
 
