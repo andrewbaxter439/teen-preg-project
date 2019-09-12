@@ -1,11 +1,11 @@
 ---
-title: "Initial ITS models"
+title: "Initial ITS models - draft"
 output:
   # html_document:
   #   df_print: paged
   #   theme: readable
   word_document:
-    reference_docx: ITS_template.docx
+    reference_docx: report_template.docx
     fig_width: 8
     fig_height: 6
   # github_document: default

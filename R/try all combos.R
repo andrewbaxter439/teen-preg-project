@@ -5,12 +5,13 @@ y1:y2
 pred <- "pRate"
 n = 5
 
-testSynthInterations <- function(yrs = 1990:1998, 
+testSynthIterations <- function(yrs = 1990:1998, 
                                  pred = "pRate",
                                  data = synthData_U20, 
                                  ccodes = u_20_codes,
                                  n = 5,
                                  predictors = NULL,
+                                 time.optimise = 1990:1998,
                                  ...) {
   
   require(gtools)
@@ -55,7 +56,7 @@ testSynthInterations <- function(yrs = 1990:1998,
       time.variable = "Year",
       treatment.identifier = ccodes$Code[ccodes$Country =="England and Wales"],
       controls.identifier = ccodes$Code[ccodes$Country !="England and Wales"],
-      time.optimize.ssr = 1990:1998,
+      time.optimize.ssr = time.optimise,
       time.plot = yrs
     )
     
@@ -132,10 +133,6 @@ it_U18_noScotNI %>%
   arrange(mbpe) %>% 
   View()
 
-sp_U18_noScotNI <- it_U18_noScotNI$sPred[it_U18_noScotNI$iteration==63][[1]]
-
-
-
-# U_20 with all countries included ---------------------------------------------------------------------------
+sp_U18_noScotNI <- it_U18_noScotNI$sPred[it_U18_noScotNI$iteration==45][[1]]
 
 

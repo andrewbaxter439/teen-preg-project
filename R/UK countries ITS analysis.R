@@ -51,7 +51,15 @@ all.UK.rates <-
 
 # Create datasets --------------------------------------------------------------------------------------------
 
-
+# Eng_wal_comparison <- 
+  all.UK.rates %>% 
+  filter(Country == "England"|Country== "England and Wales") %>% 
+  select(Country, `1992`:`2016`) %>% 
+  gather("Year", "Value", -1) %>% 
+  spread(Country, Value) %>% 
+  mutate(sq_er = (England - `England and Wales`)**2) %>% 
+  summarise(correlation = cor(England, `England and Wales`), mse = mean(sq_er)) %>% 
+  mutate(rmse = sqrt(mse), Rsq = correlation**2)
 #** EngData - England only -------------------------------------------------------------------------------------
 
 EngData <- all.UK.rates %>% filter(Country == "England") %>%
