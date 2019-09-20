@@ -56,6 +56,7 @@ gg_synth <- function(dp = NULL, md = NULL, yr = 1999, post = FALSE, mspe = NULL,
     scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
     geom_vline(xintercept = 1998.5, linetype = "dotted") +
     scale_x_continuous(limits = c(NA, xmax)) +
+    scale_y_continuous(limits = c(0, NA)) +
     labs(subtitle = paste0("Pre-intervention MSPE = ", mspe))
 
   return(plot)
@@ -152,14 +153,14 @@ generatePlacebos <- function(data,
   )
     
     # md <- predvalues_synth(dp, FALSE, ...) 
-    # mspe <- pre_MSPE(md)
     so <- synth(dp, ...)
     synthC <- dp$Y0 %*% so$solution.w
     
     md <- tibble(Year = as.numeric(rownames(dp$Y1)), Treated = dp$Y1[,1], Synthetic = synthC[,1]) %>% 
       gather("Group", "Rate", -1)
     
-    mspe <- so$loss.v
+    mspe <- pre_MSPE(md)
+    # mspe <- so$loss.v
     
     gaps <- md %>%
       spread(Group, Rate) %>% 
@@ -243,10 +244,102 @@ interpolateAb <- function(country, data = synth_data_plus_ab){
   
 }
 
+testSynthIterations_single <- function(yrs = 1990:1998,
+                                pred = "pRate",
+                                data = synthData_u20,
+                                ccodes = u_20_ccodes,
+                                n = 5,
+                                predictors = NULL,
+                                time.optimise = 1990:1998,
+                                ...) {
+
+  require(gtools)
+  require(dplyr)
+  require(Synth)
+  require(stringr)
+
+  data <- data.frame(data)
+  x <- 1:n
+
+  combos <- combinations(length(x), length(yrs), x, repeats.allowed = TRUE)
+
+  i <- 1
+
+  for (i in 1:nrow(combos)){
+    combos[i,] <- as.numeric(as.factor(as.character(combos[i,])))
+  }
+
+  combos <- unique(combos)
+
+  mspes <- c()
+  sps <- c()
+
+  i <- 1
+
+  for (i in 1:nrow(combos)) {
+    print(paste0("iteration ", i, "/", nrow(combos)))
+
+    special.preds <- list(
+      a = list(pred, yrs = yrs[combos[i,] == 1], "mean"),
+      b = list(pred, yrs = yrs[combos[i,] == 2], "mean"),
+      c = list(pred, yrs = yrs[combos[i,] == 3], "mean"),
+      d = list(pred, yrs = yrs[combos[i,] == 4], "mean"),
+      e = list(pred, yrs = yrs[combos[i,] == 5], "mean")
+    )
+
+    dp <-   dataprep(
+      foo = data.frame(data %>% filter(Year >= yrs[1])),
+      predictors = predictors,
+      special.predictors = special.preds[map_lgl(special.preds, ~ sum(.$yrs) > 0)],
+      time.predictors.prior = yrs,
+      dependent = pred,
+      unit.variable = "Code",
+      unit.names.variable = "Country",
+      time.variable = "Year",
+      treatment.identifier = ccodes$Code[ccodes$Country =="England and Wales"],
+      controls.identifier = ccodes$Code[ccodes$Country !="England and Wales"],
+      time.optimize.ssr = time.optimise,
+      time.plot = yrs
+    )
+
+    # md <- predvalues_synth(dp, synth_outputs = FALSE, ...)
+
+    so <- synth(dp, ...)
+    synthC <- dp$Y0 %*% so$solution.w
+
+    md <- tibble(Year = as.numeric(rownames(dp$Y1)), Treated = dp$Y1[,1], Synthetic = synthC[,1]) %>%
+      gather("Group", "Rate", -1)
+
+    mspes[i] <- so$loss.v
+
+    sps[[i]] <-special.preds[map_lgl(special.preds, ~ sum(.$yrs) > 0)]
+
+
+
+  }
+
+
+  tb <- tibble(iteration = 1:nrow(combos),
+               pattern = NA,
+               mspe = mspes,
+               sPred = sps,
+               groups = NA)
+
+  i <- 1
+  for (i in 1:nrow(combos)){
+    tb$pattern[i] <- str_flatten(combos[i,], collapse = ", ")
+    tb$groups[i] <- length(tb$sPred[[i]])
+  }
+
+
+  return(tb)
+
+}
+
 testSynthIterations <- function(yrs = 1990:1998, 
                                 pred = "pRate",
-                                data = synthData_U20, 
-                                ccodes = u_20_codes,
+                                data = synthData_u20, 
+                                ccodes = u_20_ccodes,
                                 n = 5,
                                 predictors = NULL,
                                 time.optimise = 1990:1998,
@@ -256,6 +349,9 @@ testSynthIterations <- function(yrs = 1990:1998,
   require(dplyr)
   require(Synth)
   require(stringr)
+  require(foreach)
+  require(doParallel)
+  require(tcltk)
   
   data <- data.frame(data)
   x <- 1:n
@@ -272,12 +368,25 @@ testSynthIterations <- function(yrs = 1990:1998,
   
   mspes <- c()
   sps <- c()
+  w <- c()
+  v <- c()
+  
+  cores <- detectCores()
+  
+  cl <- makeCluster(cores-1)
+  
+  registerDoParallel(cl)
   
   i <- 1
-  
-  for (i in 1:nrow(combos)) {
-    print(paste0("iteration ", i, "/", nrow(combos)))
-    
+  tb <- tibble()
+  # for (i in 1:nrow(combos)) {
+  tb <- foreach (i=1:nrow(combos),
+                 .packages = c("Synth", "dplyr", "purrr", "tidyr", "tcltk", "parallel"),
+                 .combine = bind_rows) %dopar% {
+
+                   if(!exists("pb")) pb <- tkProgressBar("Iterations", min = 1, max = nrow(combos))
+                   setTkProgressBar(pb, i)
+                   
     special.preds <- list(
       a = list(pred, yrs = yrs[combos[i,] == 1], "mean"),
       b = list(pred, yrs = yrs[combos[i,] == 2], "mean"),
@@ -286,7 +395,7 @@ testSynthIterations <- function(yrs = 1990:1998,
       e = list(pred, yrs = yrs[combos[i,] == 5], "mean")
     )
     
-    dp <-   dataprep(
+    dp <- dataprep(
       foo = data.frame(data %>% filter(Year >= yrs[1])),
       predictors = predictors,
       special.predictors = special.preds[map_lgl(special.preds, ~ sum(.$yrs) > 0)],
@@ -298,48 +407,67 @@ testSynthIterations <- function(yrs = 1990:1998,
       treatment.identifier = ccodes$Code[ccodes$Country =="England and Wales"],
       controls.identifier = ccodes$Code[ccodes$Country !="England and Wales"],
       time.optimize.ssr = time.optimise,
-      time.plot = yrs
+      time.plot = yrs[1]:2013
     )
     
     # md <- predvalues_synth(dp, synth_outputs = FALSE, ...)
     
     so <- synth(dp, ...)
+    st <- synth.tab(so, dp)
+    
     synthC <- dp$Y0 %*% so$solution.w
     
     md <- tibble(Year = as.numeric(rownames(dp$Y1)), Treated = dp$Y1[,1], Synthetic = synthC[,1]) %>% 
       gather("Group", "Rate", -1)
     
-    mspes[i] <- so$loss.v
+    mspe <- so$loss.v[1,1]
+    
+    w <- st$tab.w
+    v <- tibble(Pred = row.names(st$tab.v), v_weight = st$tab.v[1])
 
-    sps[[i]] <-special.preds[map_lgl(special.preds, ~ sum(.$yrs) > 0)]
+    sps <- special.preds[map_lgl(special.preds, ~ sum(.$yrs) > 0)]
     
+    gaps <- md %>%
+      spread(Group, Rate) %>% 
+      mutate(iteration = i,
+             groups = length(sps),
+             Gap = Treated - Synthetic)
     
+    if(i>=(nrow(combos)-(detectCores()-1))) {close(pb)}
+    
+    tibble(iteration = i, 
+           pattern = NA,  
+           mspe, 
+           sPred = list(sps), 
+           w_weights = list(w), 
+           v_weights = list(v),
+           gaps = list(gaps))
     
   }
   
   
-  tb <- tibble(iteration = 1:nrow(combos),
-               pattern = NA,
-               mspe = mspes,
-               sPred = sps,
-               groups = NA)
-  
+  # tb <- tibble(iteration = 1:nrow(combos),
+  #              pattern = NA,
+  #              mspe = mspes,
+  #              sPred = sps,
+  #              groups = NA,
+  #              w_weights = w,
+  #              v_weights = v)
+  # 
   i <- 1
   for (i in 1:nrow(combos)){
-    tb$pattern[i] <- str_flatten(combos[i,], collapse = ", ")  
+    tb$pattern[i] <- str_flatten(combos[i,], collapse = ", ")
     tb$groups[i] <- length(tb$sPred[[i]])
   }
-  
-  
+
+
   return(tb)
-  
+  registerDoSEQ()
 }
+
 
 # Initial dataprep and synth ----------------------------------------
 
-data <- synthData_u18
-ccodes <- u_18_ccodes
-grp <- "u_18_gdp"
 
 synthPrep <- function(data, 
                       grp, 
@@ -405,8 +533,43 @@ md <- tibble(Year = as.numeric(rownames(dp$Y1)), Treated = dp$Y1[,1], Synthetic 
   
 }
 
-# synthPrep(synthData_u18[,1:5] %>% filter(!Country %in% exclude_u18_gdp),
-#           "u18_gdp",
-#           dependent = "rate",
-#           predictors = "GDPperCap",
-#           special.predictors = sp_u18_gdp)
+
+# iterating through year permutations ------------------------------------------------------------------------
+
+plotIterations <- function(iteration = it_u18_rateSp, post = FALSE) {
+  
+  require(dplyr)
+  require(ggplot2)
+  require(SPHSUgraphs)
+  require(purrr)
+  require(ggpubr)
+  
+  mspes <- iteration %>% 
+    mutate(groups = as.factor(groups)) %>% 
+    ggplot(aes(mspe, fill = groups)) +
+    geom_histogram(bins = 50) +
+    theme_sphsu_light() +
+    scale_fill_sphsu()
+  
+  gaps <- iteration %>% 
+    select(gaps) %>%
+    map(bind_rows) %>%
+    pluck("gaps") %>% 
+    mutate(groups = as.factor(groups))
+  
+  if (!post) {
+    gaps <- gaps %>% filter(Year<1999)
+  }
+  
+  ggraph <- gaps %>% 
+    ggplot(aes(Year, Gap, group = iteration, col = groups)) + 
+    geom_segment(x = 1985, xend = 2013, y = 0, yend = 0, col = "black") + 
+    geom_line(size = 1, alpha = 0.8) +
+    theme_minimal()+
+    theme(panel.grid = element_blank())+
+    geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +
+    scale_colour_sphsu()
+  
+  ggarrange(mspes, ggraph, ncol = 2, common.legend = TRUE, legend = "right")
+  
+}

@@ -11,7 +11,13 @@ always_allow_html: yes
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo = FALSE, 
+                      message = FALSE, 
+                      warning = FALSE,
+                      fig.width = 6,
+                      fig.height = 5,
+                      dpi = 150,
+                      out.width = "100%")
 library(readxl)
 library(tidyverse)
 library(stringr)
@@ -71,32 +77,21 @@ it_u18_rateSp <- testSynthIterations(
 
 ### England vs Synthetic Control
 ```{r md_u18_rateSp, include = FALSE}
-
-
-dp_u18_rateSp <- dataprep(
-  foo = synthData_u18[,1:4],
-  special.predictors = sp_u18_rateSp,
-  time.predictors.prior = 1985:1998,
-  dependent = "rate",
-  unit.variable = "Code",
-  unit.names.variable = "Country",
-  time.variable = "Year",
-  treatment.identifier = u_18_ccodes$Code[u_18_ccodes$Country =="England and Wales"],
-  controls.identifier = u_18_ccodes$Code[u_18_ccodes$Country !="England and Wales"],
-  time.optimize.ssr = 1985:1998,
-  time.plot = 1985:2013
-)
-
-md_u18_rateSp <- predvalues_synth(dp_u18_rateSp)
-
-mspe_limit_u18_rateSp <- so_u18_rateSp$loss.v[1]
+opt_y1 <- 1985
+synthPrep(synthData_u18[,1:4],
+          grp = "u18_rateSp",
+          dependent = "rate",
+          special.predictors = sp_u18_rateSp,
+          time.optimise.ssr = opt_y1:1998)
 ```
 
 ```{r md_u18_rateSp_graph}
-gr_u18_rateSp <- gg_synth(md = md_u18_rateSp, post = TRUE, mspe = mspe_limit_u18_rateSp) 
+gr_u18_rateSp <- gg_synth(md = md_u18_rateSp, post = TRUE) 
 
 
 gr_u18_rateSp + labs(title = sPredText(dp_u18_rateSp))
+
+# ggsave("graphs/Synth-u18-sp.svg", width = 200, height = 150, units = "mm")
 
 ```
 
@@ -105,13 +100,25 @@ gr_u18_rateSp + labs(title = sPredText(dp_u18_rateSp))
 ```{r st_u18_rateSp_w}
 st_u18_rateSp$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, Weight = w.weights) %>% 
   kable()
+st_u18_rateSp$tab.v %>% kable()
 ```
 
 
 ### Placebo testing by country and time
 
 ```{r plot_u18_pb_nat}
-gg_gaps(md_u18_rateSp, pl_u18_rateSp, mspe_limit = mspe_limit_u18_rateSp ) + theme(text = element_text(size = 16)) - ggplotly
+pb_plot <- 
+  gg_gaps(md_u18_rateSp, pl_u18_rateSp) + 
+  # theme(text = element_text(size = 12),
+  #       title = element_text(size = 12)) +
+  labs(title = "England vs Synthetic Control, no added predictors - country placebo")
+
+ggplotly(pb_plot) #%>% 
+# api_create()
+```
+```{r save_u18_pb_nat, include=FALSE}
+
+# ggsave(plot = pb_plot, "graphs/Synth-u18-sp-gaps.svg", width = 200, height = 150, units = "mm")
 ```
 
 ```{r u18_pb_time, eval=FALSE, include=FALSE}
@@ -135,7 +142,7 @@ dp <- dataprep(
   foo = synthData_u18[,1:4],
   special.predictors = sp,
   predictors.op = "mean",
-  time.predictors.prior = 1985:y,
+  time.predictors.prior = opt_y1:y,
   dependent = "rate",
   unit.variable = "Code",
   unit.names.variable = "Country",
@@ -156,7 +163,8 @@ dp <- dataprep(
 ```{r u18_pb_time_graph}
 tb_u18_sp <- super_md_u18_sp %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
-  geom_line(size = 1) +
+  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 20), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
+  geom_line(size = 1.5) +
   theme_sphsu_light() +
   ylab(paste0("Under-18 birth rate (per 1,000 women)")) +
   theme(legend.title = element_blank(),
@@ -164,7 +172,7 @@ tb_u18_sp <- super_md_u18_sp %>%
         line = element_blank()) +
   scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +
   scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
-  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 20), linetype = "dotted", size = 1, col = "#000000", alpha = 0.7) +
+  labs(title = "England vs Synthetic Control, no added predictors - time placebo") +
   scale_y_continuous(limits = c(0, 20))
 
 # tb_u18_sp + facet_wrap(super_md_u18_sp$IntYr, ncol = 3)
@@ -182,19 +190,39 @@ tp_u18_sp_plotly
 
 ### England vs Synthetic Control
 ```{r u18_gdp, include = FALSE}
+
 # dataprep and synth
-synthPrep(synthData_u18[,1:5] %>% filter(!Country %in% exclude_u18_gdp),
+# opt_y1 <- 1994
+# synthPrep(synthData_u18[,1:5] %>% filter(!Country %in% exclude_u18_gdp),
+#           "u18_gdp",
+#           dependent = "rate",
+#           predictors = "GDPperCap",
+#           special.predictors = sp_u18_gdp,
+#           time.optimise.ssr = opt_y1:1998)
+
+# dataprep and synth - 1990 onwards method
+opt_y1 <- 1990
+synthPrep(synthData_u18[,1:5] %>% filter(!Country %in% exclude_u18_gdp_1990),
           "u18_gdp",
           dependent = "rate",
           predictors = "GDPperCap",
-          special.predictors = sp_u18_gdp)
+          special.predictors = list(
+            list("rate", 1990:1994, "mean"),
+            list("rate", 1995:1998, "mean")
+          ),
+          time.optimise.ssr = opt_y1:1998,
+          time.predictors.prior = 1990:1998,
+          time.plot = 1990:2013)
 ```
 ```{r md_u18_gdp_graph}
 # graph
-gr_u18_gdp <- gg_synth(md = md_u18_gdp, post = TRUE, mspe = mspe_limit_u18_gdp) 
+gr_u18_gdp <- gg_synth(md = md_u18_gdp, post = TRUE) 
 
 
 gr_u18_gdp + labs(title = sPredText(dp_u18_gdp))
+
+# ggsave("graphs/Synth-u18-gdp.svg", width = 200, height = 150, units = "mm")
+# ggsave("graphs/Synth-u18-gdp-1990.svg", width = 200, height = 150, units = "mm")
 ```
 
 ### Weights
@@ -202,12 +230,21 @@ gr_u18_gdp + labs(title = sPredText(dp_u18_gdp))
 # weights kable
 st_u18_gdp$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, Weight = w.weights) %>% 
   kable()
+st_u18_gdp$tab.v %>% kable()
 ```
 
 ### Placebo testing by country and time
 ```{r plot_u18_gdp_pb_nat}
 # gaps graph
-gg_gaps(md_u18_gdp, pl_u18_gdp, mspe_limit = mspe_limit_u18_gdp ) + theme(text = element_text(size = 16)) - ggplotly
+pb_plot <- gg_gaps(md_u18_gdp, pl_u18_gdp) +
+  labs(title = "England vs Synthetic Control, GDP as predictor - country placebo")
+
+ggplotly(pb_plot) #%>% 
+# api_create()
+```
+```{r save_u18_gdp_pb_nat, include=FALSE}
+
+# ggsave(plot = pb_plot, "graphs/Synth-u18-gdp-gaps.svg", width = 200, height = 150, units = "mm")
 ```
 
 ```{r u18_gdp_pb_time, eval=FALSE, include = FALSE}
@@ -240,7 +277,7 @@ dp <- dataprep(
   time.variable = "Year",
   treatment.identifier = u_18_ccodes$Code[u_18_ccodes$Country =="England and Wales"],
   controls.identifier = u_18_ccodes %>% filter(!Country %in% exclude_u18_all, Country != "England and Wales") %>% pull(Code),
-  time.optimize.ssr = 1985:y,
+  time.optimize.ssr = opt_y1:y,
   time.plot = 1985:2013
 )
   md <- predvalues_synth(dp, synth_outputs = FALSE, yr = y)
@@ -255,7 +292,8 @@ dp <- dataprep(
 # placebo graph
 tp_u18_gdp_plotly <- super_md_u18_gdp %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
-  geom_line(size = 1) +
+  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 20), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
+  geom_line(size = 1.5) +
   theme_sphsu_light() +
   ylab(paste0("Under-18 birth rate (per 1,000 women)")) +
   theme(legend.title = element_blank(),
@@ -263,7 +301,7 @@ tp_u18_gdp_plotly <- super_md_u18_gdp %>%
         line = element_blank()) +
   scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +
   scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
-  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 20), linetype = "dotted", size = 1, col = "#000000", alpha = 0.7) +
+    labs(title = "England vs Synthetic Control, GDP per capita as predictor - time placebo") +
   scale_y_continuous(limits = c(0, 20)) - ggplotly
 
 tp_u18_gdp_plotly <- tp_u18_gdp_plotly %>% 
@@ -271,25 +309,49 @@ tp_u18_gdp_plotly <- tp_u18_gdp_plotly %>%
   animation_opts(easing = 'sin-in-out')
 
 tp_u18_gdp_plotly
+# api_create(tp_u18_gdp_plotly, filename = "England under-18 - GDP per capita as predictor - placebo time")
+
 ```
 
 ## Model 3: All predictors
 
 ### England vs Synthetic Control
 ```{r u18_all, include = FALSE}
+
+
 # dataprep and synth
-synthPrep(synthData_u18 %>% filter(!Country %in% exclude_u18_all),
+# opt_y1 <- 1994
+# synthPrep(synthData_u18 %>% filter(!Country %in% exclude_u18_all),
+#           "u18_all",
+#           dependent = "rate",
+#           predictors = c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"),
+#           special.predictors = sp_u18_all,
+#           time.optimise.ssr = opt_y1:1998)
+
+
+# dataprep and synth - excluding pre-1990 data
+opt_y1 <- 1990
+synthPrep(synthData_u18 %>% filter(!Country %in% exclude_u18_all_1990),
           "u18_all",
           dependent = "rate",
           predictors = c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"),
-          special.predictors = sp_u18_all)
+          special.predictors = list(
+            list("rate", 1990:1994, "mean"),
+            list("rate", 1995:1998, "mean")
+          ),
+          time.optimise.ssr = opt_y1:1998,
+          time.predictors.prior = 1990:1998,
+          time.plot = 1990:2013)
 ```
 ```{r md_u18_all_graph}
 # graph
-gr_u18_all <- gg_synth(md = md_u18_all, post = TRUE, mspe = mspe_limit_u18_all) 
+gr_u18_all <- gg_synth(md = md_u18_all, post = TRUE) 
 
 
 gr_u18_all + labs(title = sPredText(dp_u18_all))
+
+# ggsave("graphs/Synth-u18-all.svg", width = 200, height = 150, units = "mm")
+ggsave("graphs/Synth-u18-all-1990.svg", width = 200, height = 150, units = "mm")
 ```
 
 ### Weights
@@ -297,12 +359,21 @@ gr_u18_all + labs(title = sPredText(dp_u18_all))
 # weights kable
 st_u18_all$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, Weight = w.weights) %>% 
   kable()
+st_u18_all$tab.v %>% kable()
 ```
 
 ### Placebo testing by country and time
 ```{r plot_u18_all_pb_nat}
 # gaps graph
-gg_gaps(md_u18_all, pl_u18_all, mspe_limit = mspe_limit_u18_all ) + theme(text = element_text(size = 16)) - ggplotly
+pb_plot <- 
+gg_gaps(md_u18_all, pl_u18_all) + 
+  labs(title = "England vs Synthetic Control, all predictors - country placebo")
+
+ggplotly(pb_plot) #%>% 
+# api_create()
+```
+```{r save_u18_all_pb_nat, include=FALSE}
+# ggsave(plot = pb_plot,"graphs/Synth-u18-all-gaps.svg", width = 200, height = 150, units = "mm")
 ```
 
 ```{r u18_all_pb_time, eval=FALSE, include = FALSE}
@@ -336,7 +407,7 @@ dp <- dataprep(
   time.variable = "Year",
   treatment.identifier = u_18_ccodes$Code[u_18_ccodes$Country =="England and Wales"],
   controls.identifier = u_18_ccodes %>% filter(!Country %in% exclude_u18_all, Country != "England and Wales") %>% pull(Code),
-  time.optimize.ssr = 1985:y,
+  time.optimize.ssr = opt_y1:y,
   time.plot = 1985:2013
 )
   md <- predvalues_synth(dp, synth_outputs = FALSE, yr = y)
@@ -351,7 +422,8 @@ dp <- dataprep(
 # placebo graph
 tp_u18_all_plotly <- super_md_u18_all %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
-  geom_line(size = 1) +
+  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 20), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
+  geom_line(size = 1.5) +
   theme_sphsu_light() +
   ylab(paste0("Under-18 birth rate (per 1,000 women)")) +
   theme(legend.title = element_blank(),
@@ -359,7 +431,7 @@ tp_u18_all_plotly <- super_md_u18_all %>%
         line = element_blank()) +
   scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +
   scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
-  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 20), linetype = "dotted", size = 1, col = "#000000", alpha = 0.7) +
+    labs(title = "England vs Synthetic Control, all predictors - time placebo") +
   scale_y_continuous(limits = c(0, 20)) - ggplotly
 
 tp_u18_all_plotly <- tp_u18_all_plotly %>% 
@@ -367,6 +439,7 @@ tp_u18_all_plotly <- tp_u18_all_plotly %>%
   animation_opts(easing = 'sin-in-out')
   
   tp_u18_all_plotly
+  # api_create(tp_u18_all_plotly, filename = "England under-18 - all predictors - placebo time")
 ```
 
 # Generating Synthetic Control models for all Under-20 comparisons
@@ -375,18 +448,21 @@ tp_u18_all_plotly <- tp_u18_all_plotly %>%
 
 ### England vs Synthetic Control
 ```{r u20_sp, include = FALSE}
+opt_y1 <- 1990
 # dataprep and synth
 synthPrep(synthData_u20[,1:4],
           "u20_sp",
           dependent = "pRate",
-          special.predictors = sp_u20_sp)
+          special.predictors = sp_u20_sp,
+          time.optimise.ssr = opt_y1:1998)
 ```
 ```{r md_u20_sp_graph}
 # graph
-gr_u20_sp <- gg_synth(md = md_u20_sp, post = TRUE, mspe = mspe_limit_u20_sp) 
+gr_u20_sp <- gg_synth(md = md_u20_sp, post = TRUE) 
 
 
 gr_u20_sp + labs(title = sPredText(dp_u20_sp))
+# ggsave("graphs/Synth-u20-sp.svg", width = 200, height = 150, units = "mm")
 ```
 
 ### Weights
@@ -394,12 +470,21 @@ gr_u20_sp + labs(title = sPredText(dp_u20_sp))
 # weights kable
 st_u20_sp$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, Weight = w.weights) %>% 
   kable()
+st_u20_sp$tab.v %>% kable()
 ```
 
 ### Placebo testing by country and time
 ```{r plot_u20_sp_pb_nat}
 # gaps graph
-gg_gaps(md_u20_sp, pl_u20_sp, mspe_limit = mspe_limit_u20_sp ) + theme(text = element_text(size = 16)) - ggplotly
+pb_plot <- 
+gg_gaps(md_u20_sp, pl_u20_sp) + 
+  labs(title = "England vs Synthetic Control, no added predictors - country placebo")
+
+ggplotly(pb_plot)# %>% 
+# api_create()
+```
+```{r save_u20_sp_pb_nat, include=FALSE}
+# ggsave(plot = pb_plot, "graphs/Synth-u20-sp-gaps.svg", width = 200, height = 150, units = "mm")
 ```
 
 ```{r u20_sp_pb_time, eval=FALSE, include = FALSE}
@@ -431,7 +516,7 @@ dp <- dataprep(
   time.variable = "Year",
   treatment.identifier = u_20_ccodes$Code[u_20_ccodes$Country =="England and Wales"],
   controls.identifier = u_20_ccodes %>% filter(Country != "England and Wales") %>% pull(Code),
-  time.optimize.ssr = 1990:y,
+  time.optimize.ssr = opt_y1:y,
   time.plot = 1990:2013
 )
   md <- predvalues_synth(dp, synth_outputs = FALSE, yr = y)
@@ -446,7 +531,8 @@ dp <- dataprep(
 # placebo graph
 tp_u20_sp_plotly <- super_md_u20_sp %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
-  geom_line(size = 1) +
+  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 80), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
+  geom_line(size = 1.5) +
   theme_sphsu_light() +
   ylab(paste0("Under-20 pregnancy rate (per 1,000 women)")) +
   theme(legend.title = element_blank(),
@@ -454,7 +540,7 @@ tp_u20_sp_plotly <- super_md_u20_sp %>%
         line = element_blank()) +
   scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +
   scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
-  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 80), linetype = "dotted", size = 1, col = "#000000", alpha = 0.7) +
+    labs(title = "England vs Synthetic Control, no added predictors - time placebo") +
   scale_y_continuous(limits = c(0, 80)) - ggplotly
 
 tp_u20_sp_plotly <- tp_u20_sp_plotly %>% 
@@ -466,24 +552,26 @@ tp_u20_sp_plotly <- tp_u20_sp_plotly %>%
   # api_create(tp_u20_sp_plotly, filename = "England under-20 - special predictors - placebo time")
 ```
 
-## Model 2: GDP as predictor
+## Model 5: GDP as predictor
 
 ### England vs Synthetic Control
 ```{r u20_gdp, include = FALSE}
+opt_y1 <- 1990
 # dataprep and synth
 synthPrep(synthData_u20[,c(1:4, 6)] %>% filter(!Country %in% exclude_u20_gdp),
           "u20_gdp",
           dependent = "pRate",
           predictors = "GDPperCap",
           special.predictors = sp_u20_gdp, 
-          time.optimise.ssr = 1990:1998)
+          time.optimise.ssr = opt_y1:1998)
 ```
 ```{r md_u20_gdp_graph}
 # graph
-gr_u20_gdp <- gg_synth(md = md_u20_gdp, post = TRUE, mspe = mspe_limit_u20_gdp) 
+gr_u20_gdp <- gg_synth(md = md_u20_gdp, post = TRUE) 
 
 
 gr_u20_gdp + labs(title = sPredText(dp_u20_gdp))
+# ggsave("graphs/Synth-u20-gdp.svg", width = 200, height = 150, units = "mm")
 ```
 
 ### Weights
@@ -491,12 +579,21 @@ gr_u20_gdp + labs(title = sPredText(dp_u20_gdp))
 # weights kable
 st_u20_gdp$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, Weight = w.weights) %>% 
   kable()
+st_u20_gdp$tab.v %>% kable()
 ```
 
 ### Placebo testing by country and time
 ```{r plot_u20_gdp_pb_nat}
 # gaps graph
-gg_gaps(md_u20_gdp, pl_u20_gdp, mspe_limit = mspe_limit_u20_gdp ) + theme(text = element_text(size = 16)) - ggplotly
+pb_plot <- 
+gg_gaps(md_u20_gdp, pl_u20_gdp) +
+  labs(title = "England vs Synthetic Control, GDP as predictor - country placebo")
+
+ggplotly(pb_plot) #%>% 
+# api_create()
+```
+```{r save_u20_gdp_pb_nat, include=FALSE}
+# ggsave(plot = pb_plot, "graphs/Synth-u20-gdp-gaps.svg", width = 200, height = 150, units = "mm")
 ```
 
 ```{r u20_gdp_pb_time, eval=FALSE, include = FALSE}
@@ -530,7 +627,7 @@ dp <- dataprep(
   time.variable = "Year",
   treatment.identifier = u_20_ccodes$Code[u_20_ccodes$Country =="England and Wales"],
   controls.identifier = u_20_ccodes %>% filter(!Country %in% exclude_u20_gdp, Country != "England and Wales") %>% pull(Code),
-  time.optimize.ssr = 1990:y,
+  time.optimize.ssr = opt_y1:y,
   time.plot = 1990:2013
 )
   md <- predvalues_synth(dp, synth_outputs = FALSE, yr = y)
@@ -545,7 +642,8 @@ dp <- dataprep(
 # placebo graph
 tp_u20_gdp_plotly <- super_md_u20_gdp %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
-  geom_line(size = 1) +
+  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 80), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
+  geom_line(size = 1.5) +
   theme_sphsu_light() +
   ylab(paste0("Under-20 pregnancy rate (per 1,000 women)")) +
   theme(legend.title = element_blank(),
@@ -553,7 +651,7 @@ tp_u20_gdp_plotly <- super_md_u20_gdp %>%
         line = element_blank()) +
   scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +
   scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
-  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 80), linetype = "dotted", size = 1, col = "#000000", alpha = 0.7) +
+    labs(title = "England vs Synthetic Control, GDP per capita predictor - time placebo") +
   scale_y_continuous(limits = c(0, 80)) - ggplotly
 
 tp_u20_gdp_plotly <- tp_u20_gdp_plotly %>% 
@@ -561,25 +659,30 @@ tp_u20_gdp_plotly <- tp_u20_gdp_plotly %>%
   animation_opts(easing = 'sin-in-out')
   
   tp_u20_gdp_plotly
+  # api_create(tp_u20_gdp_plotly, filename = "England under-20 - GDP per capita as predictor - placebo time")
 ```
 
-## Model 3: All predictors
+## Model 6: All predictors
 
 ### England vs Synthetic Control
 ```{r u20_all, include = FALSE}
+opt_y1 <- 1990
 # dataprep and synth
 synthPrep(synthData_u20[,-5] %>% filter(!Country %in% exclude_u20_all),
           "u20_all",
           dependent = "pRate",
           predictors = c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"),
-          special.predictors = sp_u20_all)
+          special.predictors = sp_u20_all, 
+          time.optimise.ssr = opt_y1:1998)
 ```
 ```{r md_u20_all_graph}
 # graph
-gr_u20_all <- gg_synth(md = md_u20_all, post = TRUE, mspe = mspe_limit_u20_all) 
+gr_u20_all <- gg_synth(md = md_u20_all, post = TRUE) 
 
 
 gr_u20_all + labs(title = sPredText(dp_u20_all))
+
+# ggsave("graphs/Synth-u20-all.svg", width = 200, height = 150, units = "mm")
 ```
 
 ### Weights
@@ -587,12 +690,21 @@ gr_u20_all + labs(title = sPredText(dp_u20_all))
 # weights kable
 st_u20_all$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, Weight = w.weights) %>% 
   kable()
+st_u20_all$tab.v %>% kable()
 ```
 
 ### Placebo testing by country and time
 ```{r plot_u20_all_pb_nat}
 # gaps graph
-gg_gaps(md_u20_all, pl_u20_all, mspe_limit = mspe_limit_u20_all ) + theme(text = element_text(size = 16)) - ggplotly
+pb_plot <- 
+gg_gaps(md_u20_all, pl_u20_all) + 
+  labs(title = "England vs Synthetic Control, all predictors - country placebo")
+
+ggplotly(pb_plot) #%>% 
+# api_create()
+```
+```{r save_u20_all_pb_nat, include=FALSE}
+# ggsave(plot = pb_plot, "graphs/Synth-u20-all-gaps.svg", width = 200, height = 150, units = "mm")
 ```
 
 ```{r u20_all_pb_time, eval=FALSE, include = FALSE}
@@ -625,7 +737,7 @@ dp <- dataprep(
   time.variable = "Year",
   treatment.identifier = u_20_ccodes$Code[u_20_ccodes$Country =="England and Wales"],
   controls.identifier = u_20_ccodes %>% filter(!Country %in% exclude_u20_all, Country != "England and Wales") %>% pull(Code),
-  time.optimize.ssr = 1990:y,
+  time.optimize.ssr = opt_y1:1998,
   time.plot = 1990:2013
 )
   md <- predvalues_synth(dp, synth_outputs = FALSE, yr = y)
@@ -640,7 +752,8 @@ dp <- dataprep(
 # placebo graph
 tp_u20_all_plotly <- super_md_u20_all %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
-  geom_line(size = 1) +
+  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 80), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
+  geom_line(size = 1.5) +
   theme_sphsu_light() +
   ylab(paste0("Under-20 pregnancy rate (per 1,000 women)")) +
   theme(legend.title = element_blank(),
@@ -648,7 +761,7 @@ tp_u20_all_plotly <- super_md_u20_all %>%
         line = element_blank()) +
   scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +
   scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
-  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 80), linetype = "dotted", size = 1, col = "#000000", alpha = 0.7) +
+    labs(title = "England vs Synthetic Control, all predictors - time placebo") +
   scale_y_continuous(limits = c(0, 80)) - ggplotly
 
 tp_u20_all_plotly <- tp_u20_all_plotly %>% 
@@ -656,4 +769,5 @@ tp_u20_all_plotly <- tp_u20_all_plotly %>%
   animation_opts(easing = 'sin-in-out')
   
   tp_u20_all_plotly
+  # api_create(tp_u20_all_plotly, filename = "England under-20 - all predictors - placebo time")
 ```

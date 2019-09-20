@@ -1,0 +1,34 @@
+---
+title: "Year permutation iterations"
+author: "Andrew Baxter"
+date: "19/09/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, error = FALSE)
+
+# library(dplyr)
+# library(purrr)
+# library(svglite)
+# library(SPHSUgraphs)
+
+`-.gg` <- function(e1, e2) e2(e1)
+```
+
+```{r load_data, include = FALSE}
+load('Data/synth_data.rdata') # outputted from 'Synth_data.R'
+load("Data/iterations.rdata")
+source('R/Synth_functions.R')
+```
+
+# Under-18 pregnancy - no added predictors
+
+```{r it_u18_plots}
+gr_it_u18_sp <- plotIterations(it_u18_rateSp)  %>% annotate_figure(top = text_grob("Under-18, no predictors - year iterations"))
+gr_it_u18_sp
+```
+
+## Top countries
+
+```{r it_u18_tops}

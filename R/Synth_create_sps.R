@@ -1,5 +1,5 @@
-source("Synth_data.R")
-source("Synth_functions.R")
+source("R/Synth_data.R")
+source("R/Synth_functions.R")
 # Special predictors iterations ------------------------------------------------------------------------------
 
 
@@ -79,7 +79,7 @@ it_u20_all <-  testSynthIterations(
 ) %>% arrange(groups, mspe)
 
 
-save(it_u18_rateSp, it_u18_gdp, it_u18_all, it_u20_sp, it_u20_gdp, it_u20_all, file = "iterations.rdata")
+save(it_u18_rateSp, it_u18_gdp, it_u18_all, it_u20_sp, it_u20_gdp, it_u20_all, file = "Data/iterations.rdata")
 
 
 # test iterations for best fits ------------------------------------------------------------------------------
@@ -122,14 +122,16 @@ save(
   sp_u20_sp,
   sp_u20_gdp,
   sp_u20_all,
-  file = "special_preds.rdata"
+  file = "Data/special_preds.rdata"
 )
 
 #  Country placebo data --------------------------------------------------------------------------------------
 
+#u18_gdp and u18_all now use 1994 as start optimise year
+
 pl_u18_rateSp  <- generatePlacebos(synthData_u18[, 1:4], special.predictors = sp_u18_rateSp, time.optimize.ssr = 1985:1998)
-pl_u18_gdp     <- generatePlacebos(synthData_u18[,1:5] %>% filter(!Country %in% exclude_u18_gdp), special.predictors = sp_u18_gdp, time.optimize.ssr = 1985:1998, predictors = "GDPperCap")
-pl_u18_all     <- generatePlacebos(synthData_u18 %>% filter(!Country %in% exclude_u18_all) , special.predictors = sp_u18_all, time.optimize.ssr = 1985:1998, predictors = c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"))
+pl_u18_gdp     <- generatePlacebos(synthData_u18[,1:5] %>% filter(!Country %in% exclude_u18_gdp), special.predictors = sp_u18_gdp, time.optimize.ssr = 1994:1998, predictors = "GDPperCap")
+pl_u18_all     <- generatePlacebos(synthData_u18 %>% filter(!Country %in% exclude_u18_all) , special.predictors = sp_u18_all, time.optimize.ssr = 1994:1998, predictors = c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"))
 pl_u20_sp      <- generatePlacebos(synthData_u20[, 1:4], special.predictors = sp_u20_sp , time.optimize.ssr = 1990:1998, time.plot = 1990:2013, dependent = "pRate")
 pl_u20_gdp     <- generatePlacebos(synthData_u20[,c(1:4, 6)] %>% filter(!Country %in% exclude_u20_gdp), special.predictors = sp_u20_gdp, time.optimize.ssr = 1990:1998, time.plot = 1990:2013, dependent = "pRate", predictors = "GDPperCap")
 pl_u20_all     <- generatePlacebos(synthData_u20[,-5] %>% filter(!Country %in% exclude_u20_all), special.predictors = sp_u20_all, time.optimize.ssr = 1990:1998, time.plot = 1990:2013, dependent = "pRate", predictors = c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"))
@@ -141,5 +143,5 @@ pl_u18_all,
 pl_u20_sp,
 pl_u20_gdp,
 pl_u20_all,
-file = "placebos_country.rdata"
+file = "Data/placebos_country.rdata"
 )

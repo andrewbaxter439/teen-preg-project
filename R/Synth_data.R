@@ -17,6 +17,8 @@ GDP_NZ <- read_xlsx("Downloaded data files/GDPdata.xlsx", sheet = "Data", skip =
   gather("Year", "GDPperCap", -1) %>% 
   mutate(Year = as.numeric(Year))
 
+GDP_lith <- read_csv("Downloaded data files/Lith-1990-1999-gdp.csv")
+
 hung_mod <- read_xlsx("Downloaded data files/GDPdata.xlsx", sheet = "Data", skip = 3) %>% 
   filter(`Country Name` == "Hungary") %>% 
   select(Country = `Country Name`, `1991`:`1995`) %>% 
@@ -71,6 +73,11 @@ synthData[synthData$Country=="England and Wales",c("GDPperCap", "MobilePhones", 
 synthData[synthData$Country == "Spain" &
             synthData$agegrp == "Under 18" & 
             synthData$Year == 1985, "MobilePhones"] <- 0
+
+synthData[synthData$Year %in% 1990:1999 & synthData$Country=="Lithuania",c("Year","GDPperCap")] <-
+synthData[synthData$Year %in% 1990:1999 & synthData$Country=="Lithuania","Year"] %>%
+  tibble(Year = .) %>% 
+  left_join(GDP_lith, by = "Year")
 
 
 synthData_u18 <- synthData %>%
@@ -209,7 +216,21 @@ exclude_u18_gdp <- synthData_u18 %>%
   unique() %>% 
   pull()
 
+exclude_u18_gdp_1990 <- synthData_u18 %>% 
+  filter(Year>=1990) %>% 
+  filter(is.na(GDPperCap)) %>% 
+  select(Country) %>% 
+  unique() %>% 
+  pull()
+
 exclude_u18_all <- synthData_u18 %>% 
+  filter_all(any_vars(is.na(.))) %>% 
+  select(Country) %>% 
+  unique() %>% 
+  pull()
+
+exclude_u18_all_1990 <- synthData_u18 %>% 
+  filter(Year>=1990) %>% 
   filter_all(any_vars(is.na(.))) %>% 
   select(Country) %>% 
   unique() %>% 
@@ -221,6 +242,7 @@ exclude_u20_gdp <- synthData_u20 %>%
   unique() %>% 
   pull()
 
+
 exclude_u20_all <- synthData_u20 %>% 
   filter_all(any_vars(is.na(.))) %>% 
   select(Country) %>% 
@@ -230,11 +252,13 @@ exclude_u20_all <- synthData_u20 %>%
 save(
   exclude_u18_gdp,
   exclude_u18_all,
+  exclude_u18_gdp_1990,
+  exclude_u18_all_1990,
   exclude_u20_gdp,
   exclude_u20_all,
   synthData_u18,
   synthData_u20,
   u_18_ccodes,
   u_20_ccodes,
-  file = "synth_data.rdata"
+  file = "Data/synth_data.rdata"
 )
