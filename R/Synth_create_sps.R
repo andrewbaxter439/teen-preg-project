@@ -37,24 +37,24 @@ it_u18_all <- testSynthIterations(
 ) %>% arrange(groups, mspe)
 
 it_u18_gdp_1990 <- testSynthIterations(
-  yrs = 1985:1998,
+  yrs = 1990:1998,
   pred = "rate",
   data = synthData_u18[,1:5] %>% filter(!Country %in% exclude_u18_gdp_1990),
   ccodes = u_18_ccodes %>% filter(!Country %in% exclude_u18_gdp_1990),
   n = 4,
   predictors = "GDPperCap",
-  time.optimise = 1985:1998
+  time.optimise = 1990:1998
 ) %>% arrange(groups, mspe)
 
 
 it_u18_all_1990 <- testSynthIterations(
-  yrs = 1985:1998,
+  yrs = 1990:1998,
   pred = "rate",
   data = synthData_u18 %>% filter(!Country %in% exclude_u18_all_1990),
   ccodes = u_18_ccodes %>% filter(!Country %in% exclude_u18_all_1990),
   n = 4,
   predictors =c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"),
-  time.optimise = 1985:1998
+  time.optimise = 1990:1998
 ) %>% arrange(groups, mspe)
 
 it_u20_sp <-  testSynthIterations(
@@ -153,3 +153,9 @@ pl_u20_gdp,
 pl_u20_all,
 file = "Data/placebos_country.rdata"
 )
+
+
+
+# Iterate through removing countries --------------------------------------
+
+
