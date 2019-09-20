@@ -1,5 +1,5 @@
-source("R/Synth_data.R")
 source("R/Synth_functions.R")
+source("R/Synth_data.R")
 # Special predictors iterations ------------------------------------------------------------------------------
 
 
@@ -13,19 +13,6 @@ it_u18_rateSp <- testSynthIterations(
   time.optimise = 1985:1998
 ) %>%
   arrange(groups, mspe)
-
-
-# it_u18_noScotNI <- testSynthIterations(
-#   yrs = 1985:1998,
-#   pred = "rate", 
-#   data = synthData_u18[,1:4], 
-#   ccodes = u_18_ccodes %>% filter(Country!="Scotland",
-#                                   Country!="Northern Ireland"), 
-#   n = 4,
-#   time.optimise = 1985:1998,
-#   Margin.ipop=.005,Sigf.ipop=7,Bound.ipop=6) %>% 
-#   arrange(groups, mspe)
-
 
 
 it_u18_gdp <- testSynthIterations(
@@ -44,6 +31,27 @@ it_u18_all <- testSynthIterations(
   pred = "rate",
   data = synthData_u18 %>% filter(!Country %in% exclude_u18_all),
   ccodes = u_18_ccodes %>% filter(!Country %in% exclude_u18_all),
+  n = 4,
+  predictors =c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"),
+  time.optimise = 1985:1998
+) %>% arrange(groups, mspe)
+
+it_u18_gdp_1990 <- testSynthIterations(
+  yrs = 1985:1998,
+  pred = "rate",
+  data = synthData_u18[,1:5] %>% filter(!Country %in% exclude_u18_gdp_1990),
+  ccodes = u_18_ccodes %>% filter(!Country %in% exclude_u18_gdp_1990),
+  n = 4,
+  predictors = "GDPperCap",
+  time.optimise = 1985:1998
+) %>% arrange(groups, mspe)
+
+
+it_u18_all_1990 <- testSynthIterations(
+  yrs = 1985:1998,
+  pred = "rate",
+  data = synthData_u18 %>% filter(!Country %in% exclude_u18_all_1990),
+  ccodes = u_18_ccodes %>% filter(!Country %in% exclude_u18_all_1990),
   n = 4,
   predictors =c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"),
   time.optimise = 1985:1998
@@ -79,7 +87,7 @@ it_u20_all <-  testSynthIterations(
 ) %>% arrange(groups, mspe)
 
 
-save(it_u18_rateSp, it_u18_gdp, it_u18_all, it_u20_sp, it_u20_gdp, it_u20_all, file = "Data/iterations.rdata")
+save(it_u18_rateSp, it_u18_gdp, it_u18_all, it_u20_sp, it_u20_gdp, it_u20_all, it_u18_all_1990, it_u18_gdp_1990, file = "Data/iterations.rdata")
 
 
 # test iterations for best fits ------------------------------------------------------------------------------

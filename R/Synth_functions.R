@@ -371,9 +371,11 @@ testSynthIterations <- function(yrs = 1990:1998,
   w <- c()
   v <- c()
   
-  cores <- detectCores()
+  cores <- detectCores() - 1
   
-  cl <- makeCluster(cores-1)
+  if (cores>8) {cores <- 8}
+  
+  cl <- makeCluster(cores)
   
   registerDoParallel(cl)
   
@@ -433,7 +435,7 @@ testSynthIterations <- function(yrs = 1990:1998,
              groups = length(sps),
              Gap = Treated - Synthetic)
     
-    if(i>=(nrow(combos)-(detectCores()-1))) {close(pb)}
+    if(i>=(nrow(combos)-cores)) {close(pb)}
     
     tibble(iteration = i, 
            pattern = NA,  
@@ -441,7 +443,8 @@ testSynthIterations <- function(yrs = 1990:1998,
            sPred = list(sps), 
            w_weights = list(w), 
            v_weights = list(v),
-           gaps = list(gaps))
+           gaps = list(gaps),
+           groups = NA)
     
   }
   
