@@ -160,7 +160,7 @@ file = "Data/placebos_country.rdata"
 
 
 
-iterateCountries <- function(data = synthData_u18[,1:4], ccodes = u_18_ccodes, n=4){
+iterateCountries <- function(data = synthData_u18[,1:4], ccodes = u_18_ccodes, n=4, ...){
 cc <- ccodes
 
 it_c <- list()
@@ -175,7 +175,8 @@ for (i in 1:(nrow(ccodes)-2)) {
     ccodes = cc,
     n = n,
     predictors = NULL,
-    time.optimise = 1985:1998
+    time.optimise = 1985:1998,
+    ...
   ) %>%
     arrange(groups, mspe)
   
