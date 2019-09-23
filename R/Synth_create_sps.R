@@ -159,3 +159,39 @@ file = "Data/placebos_country.rdata"
 # Iterate through removing countries --------------------------------------
 
 
+
+iterateCountries <- function(data = synthData_u18[,1:4], ccodes = u_18_ccodes, n=4){
+cc <- ccodes
+
+it_c <- list()
+
+for (i in 1:(nrow(ccodes)-2)) {
+  
+  
+  it <- testSynthIterations(
+    yrs = 1985:1998,
+    pred = "rate",
+    data = synthData_u18[,1:4],
+    ccodes = cc,
+    n = n,
+    predictors = NULL,
+    time.optimise = 1985:1998
+  ) %>%
+    arrange(groups, mspe)
+  
+ it_c[[i]] <- it %>% 
+    select(iteration, w_weights, mspe) %>% 
+    unnest(w_weights) %>% 
+    top_n(1, -mspe) %>% 
+    ungroup() %>% 
+    top_n(1,w.weights) %>% 
+    mutate(weight = paste0(w.weights*100, "%"),
+           label = paste0(unit.names, ", ", weight, ", ", "MSPE = ", round(mspe, 3))) %>% 
+    left_join(it %>%  select(iteration, gaps), by = "iteration")
+  
+  cc <- cc %>% filter(Code != it_c[[i]]$unit.numbers)
+  
+}
+
+return(it_c)
+}
