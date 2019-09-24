@@ -160,7 +160,7 @@ file = "Data/placebos_country.rdata"
 
 
 
-iterateCountries <- function(data = synthData_u18[,1:4], ccodes = u_18_ccodes, n=4, ...){
+iterateCountries <- function(data = synthData_u18[,1:4], ccodes = u_18_ccodes, n=4, start = 1985, pred = "rate", ...){
 cc <- ccodes
 
 it_c <- list()
@@ -169,13 +169,13 @@ for (i in 1:(nrow(ccodes)-2)) {
   
   
   it <- testSynthIterations(
-    yrs = 1985:1998,
-    pred = "rate",
-    data = synthData_u18[,1:4],
+    yrs = start:1998,
+    pred = pred,
+    data = data,
     ccodes = cc,
     n = n,
     predictors = NULL,
-    time.optimise = 1985:1998,
+    time.optimise = start:1998,
     ...
   ) %>%
     arrange(groups, mspe)
@@ -196,3 +196,16 @@ for (i in 1:(nrow(ccodes)-2)) {
 
 return(it_c)
 }
+
+
+save(itco_u18_sp, itco_u18_sp_1990, itco_u20_sp, file = "Data/iterating_rm_countries.rdata")
+
+itco_u18_sp_1990 <- iterateCountries(data = synthData_u18[,1:4], 
+                                     ccodes = u_18_ccodes,
+                                     start = 1990,
+                                     n = 4,
+                                     Margin.ipop=.005,Sigf.ipop=7,Bound.ipop=6)
+
+itco_u20_sp <- iterateCountries(data = synthData_u20[,1:4], ccodes = u_20_ccodes, pred = "pRate", start = 1990,
+                                n=4,
+                                Margin.ipop=.005,Sigf.ipop=7,Bound.ipop=6)

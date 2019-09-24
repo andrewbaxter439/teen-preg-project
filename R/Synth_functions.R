@@ -435,7 +435,7 @@ testSynthIterations <- function(yrs = 1990:1998,
              groups = length(sps),
              Gap = Treated - Synthetic)
     
-    if(i>=(nrow(combos)-cores)) {close(pb)}
+    if(i>=(nrow(combos)-8)) {close(pb)}
     
     tibble(iteration = i, 
            pattern = NA,  
