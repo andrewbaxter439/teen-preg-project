@@ -696,3 +696,28 @@ p <-  md %>%
   
   return(p)
 }
+
+
+# iterating through removal of top-weighted countries --------------------------------------------------------
+
+require(purrr)
+itco_u18_sp[[1]]$mspe
+order_co <- 
+  itco_u18_sp %>% map( ~ select(.x, label)) %>% 
+  reduce(bind_rows) %>% 
+  pull()
+
+itco_u18_sp %>% 
+  reduce(bind_rows) %>% 
+  filter(mspe<5*min(mspe)) %>% 
+  select(mspe, unit.names, label, gaps) %>% 
+  unnest(gaps) %>% 
+  mutate(label = factor(label, levels = order_co)) %>% 
+  ggplot(aes(Year, Gap)) + 
+  geom_line(size = 1, aes(col = label)) + 
+  theme_minimal() +
+  theme(panel.grid = element_blank()) +
+  geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +
+  geom_segment(x = 1985, xend = 2013, y = 0, yend = 0, col = "black") +
+  scale_colour_sphsu(name = "Top weighted country")
+

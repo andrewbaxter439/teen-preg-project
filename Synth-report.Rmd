@@ -320,7 +320,7 @@ tp_u18_gdp_plotly <- tp_u18_gdp_plotly %>%
   animation_opts(easing = 'sin-in-out')
 
 tp_u18_gdp_plotly
-api_create(tp_u18_gdp_plotly, filename = "England under-18 - GDP per capita as predictor - placebo time")
+# api_create(tp_u18_gdp_plotly, filename = "England under-18 - GDP per capita as predictor - placebo time")
 
 ```
 
@@ -410,7 +410,7 @@ for (y in 1995:2005){
   purrr::modify_if(anyNA, function(x) NULL)
 
 dp <- dataprep(
-  foo = synthData_u18 %>% filter(!Country %in% exclude_u18_all_1990),
+  foo = synthData_u18 %>% filter(Year>1989, !Country %in% exclude_u18_all_1990),
   special.predictors = sp,
   predictors = c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"),
   predictors.op = "mean",
@@ -435,7 +435,7 @@ dp <- dataprep(
 ```{r u18_all_pb_time_graph}
 # placebo graph
 tp_u18_all_plotly <- super_md_u18_all %>% 
-  ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr+1)) +
+  ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
   geom_segment(aes(x = IntYr-0.5, xend = IntYr-0.5, y = 0, yend = 20), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
   geom_line(size = 1.5) +
   theme_sphsu_light() +
@@ -453,7 +453,7 @@ tp_u18_all_plotly <- tp_u18_all_plotly %>%
   animation_opts(easing = 'sin-in-out')
   
   tp_u18_all_plotly
-  api_create(tp_u18_all_plotly, filename = "England under-18 - all predictors - placebo time")
+  # api_create(tp_u18_all_plotly, filename = "England under-18 - all predictors - placebo time")
 ```
 
 # Generating Synthetic Control models for all Under-20 comparisons

@@ -9,13 +9,13 @@ super_md_u18_sp <- tibble()
 for (y in 1995:2005){
   sp <-   purrr::map(sp_u18_rateSp, 
                      function(x) list(var = 
-                                        ifelse(min(x$yrs)<=y,
+                                        ifelse(min(x$yrs)<y,
                                                x[[1]],
                                                NA),
                                       yrs = 
-                                        x$yrs[x$yrs<=y],
+                                        x$yrs[x$yrs<y],
                                       op = 
-                                        ifelse(min(x$yrs)<=y,
+                                        ifelse(min(x$yrs)<y,
                                                x[[3]],
                                                NA))) %>% 
     purrr::modify_if(anyNA, function(x) NULL)
@@ -47,33 +47,33 @@ for (y in 1995:2005){
 super_md_u18_gdp <- tibble()
 
 for (y in 1995:2005){
-  sp <-   purrr::map(sp_u18_gdp, 
+  sp <-   purrr::map(sp_u18_gdp_1990, 
                      function(x) list(var = 
-                                        ifelse(min(x$yrs)<=y,
+                                        ifelse(min(x$yrs)<y,
                                                x[[1]],
                                                NA),
                                       yrs = 
-                                        x$yrs[x$yrs<=y],
+                                        x$yrs[x$yrs<y],
                                       op = 
-                                        ifelse(min(x$yrs)<=y,
+                                        ifelse(min(x$yrs)<y,
                                                x[[3]],
                                                NA))) %>% 
     purrr::modify_if(anyNA, function(x) NULL)
   
   dp <- dataprep(
-    foo = synthData_u18[,1:5] %>% filter(!Country %in% exclude_u18_gdp),
+    foo = synthData_u18[,1:5] %>% filter(!Country %in% exclude_u18_gdp_1990),
     special.predictors = sp,
     predictors = "GDPperCap",
     predictors.op = "mean",
-    time.predictors.prior = 1985:y,
+    time.predictors.prior = 1990:y,
     dependent = "rate",
     unit.variable = "Code",
     unit.names.variable = "Country",
     time.variable = "Year",
     treatment.identifier = u_18_ccodes$Code[u_18_ccodes$Country =="England and Wales"],
-    controls.identifier = u_18_ccodes %>% filter(!Country %in% exclude_u18_all, Country != "England and Wales") %>% pull(Code),
-    time.optimize.ssr = 1985:y,
-    time.plot = 1985:2013
+    controls.identifier = u_18_ccodes %>% filter(!Country %in% exclude_u18_gdp_1990, Country != "England and Wales") %>% pull(Code),
+    time.optimize.ssr = 1990:y,
+    time.plot = 1990:2013
   )
   md <- predvalues_synth(dp, synth_outputs = FALSE, yr = y)
   md <- md %>% 
@@ -89,33 +89,33 @@ super_md_u18_all <- tibble()
 
 for (y in 1995:2005){
   
-  sp <-   purrr::map(sp_u18_all, 
+  sp <-   purrr::map(sp_u18_all_1990, 
                      function(x) list(var = 
-                                        ifelse(min(x$yrs)<=y,
+                                        ifelse(min(x$yrs)<y,
                                                x[[1]],
                                                NA),
                                       yrs = 
-                                        x$yrs[x$yrs<=y],
+                                        x$yrs[x$yrs<y],
                                       op = 
-                                        ifelse(min(x$yrs)<=y,
+                                        ifelse(min(x$yrs)<y,
                                                x[[3]],
                                                NA))) %>% 
     purrr::modify_if(anyNA, function(x) NULL)
   
   dp <- dataprep(
-    foo = synthData_u18 %>% filter(!Country %in% exclude_u18_all),
+    foo = synthData_u18 %>% filter(!Country %in% exclude_u18_all_1990),
     special.predictors = sp,
     predictors = c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"),
     predictors.op = "mean",
-    time.predictors.prior = 1985:y,
+    time.predictors.prior = 1990:y,
     dependent = "rate",
     unit.variable = "Code",
     unit.names.variable = "Country",
     time.variable = "Year",
     treatment.identifier = u_18_ccodes$Code[u_18_ccodes$Country =="England and Wales"],
-    controls.identifier = u_18_ccodes %>% filter(!Country %in% exclude_u18_all, Country != "England and Wales") %>% pull(Code),
-    time.optimize.ssr = 1985:y,
-    time.plot = 1985:2013
+    controls.identifier = u_18_ccodes %>% filter(!Country %in% exclude_u18_all_1990, Country != "England and Wales") %>% pull(Code),
+    time.optimize.ssr = 1990:y,
+    time.plot = 1990:2013
   )
   md <- predvalues_synth(dp, synth_outputs = FALSE, yr = y)
   md <- md %>% 
@@ -132,13 +132,13 @@ super_md_u20_sp <- tibble()
 for (y in 1995:2005){
   sp <-   purrr::map(sp_u20_sp, 
                      function(x) list(var = 
-                                        ifelse(min(x$yrs)<=y,
+                                        ifelse(min(x$yrs)<y,
                                                x[[1]],
                                                NA),
                                       yrs = 
-                                        x$yrs[x$yrs<=y],
+                                        x$yrs[x$yrs<y],
                                       op = 
-                                        ifelse(min(x$yrs)<=y,
+                                        ifelse(min(x$yrs)<y,
                                                x[[3]],
                                                NA))) %>% 
     purrr::modify_if(anyNA, function(x) NULL)
@@ -173,13 +173,13 @@ for (y in 1995:2005){
   
   sp <-   purrr::map(sp_u20_gdp, 
                      function(x) list(var = 
-                                        ifelse(min(x$yrs)<=y,
+                                        ifelse(min(x$yrs)<y,
                                                x[[1]],
                                                NA),
                                       yrs = 
-                                        x$yrs[x$yrs<=y],
+                                        x$yrs[x$yrs<y],
                                       op = 
-                                        ifelse(min(x$yrs)<=y,
+                                        ifelse(min(x$yrs)<y,
                                                x[[3]],
                                                NA))) %>% 
     purrr::modify_if(anyNA, function(x) NULL)
@@ -214,13 +214,13 @@ super_md_u20_all <- tibble()
 for (y in 1995:2005){
   sp <-   purrr::map(sp_u20_all, 
                      function(x) list(var = 
-                                        ifelse(min(x$yrs)<=y,
+                                        ifelse(min(x$yrs)<y,
                                                x[[1]],
                                                NA),
                                       yrs = 
-                                        x$yrs[x$yrs<=y],
+                                        x$yrs[x$yrs<y],
                                       op = 
-                                        ifelse(min(x$yrs)<=y,
+                                        ifelse(min(x$yrs)<y,
                                                x[[3]],
                                                NA))) %>% 
     purrr::modify_if(anyNA, function(x) NULL)
