@@ -6,24 +6,26 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, error = FALSE, warning = FALSE, fig.width = 10)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, error = FALSE, warning = FALSE, fig.width = 10, fig.height = 7)
 
 library(dplyr)
 library(svglite)
-# library(SPHSUgraphs)
-# library(purrr)
-
-`-.gg` <- function(e1, e2) e2(e1)
-```
-
-```{r load_data, include = FALSE}
+library(tidyr)
+library(ggplot2)
+library(SPHSUgraphs)
+library(purrr)
+library(ggrepel)
 load('Data/synth_data.rdata') # outputted from 'Synth_data.R'
 load("Data/iterations.rdata")
 load("Data/iterating_rm_countries.rdata")
 source('R/Synth_functions.R')
+`-.gg` <- function(e1, e2) e2(e1)
 ```
 
+
 # Under-18 pregnancy - no added predictors
+
+Plotting MSPEs by iteration and gaps for all iterations.
 
 ```{r it_u18_plots}
 gr_it_u18_sp <- plotIterations(it_u18_rateSp)  %>% annotate_figure(top = text_grob("Under-18, no predictors - year iterations"))
@@ -65,5 +67,22 @@ itco_u18_sp %>%
 
 ```
 
+# Under-20 - no added predictors
 
+```{r it_u20_plots}
+gr_it_u20_sp <- plotIterations(it_u20_sp)  %>% annotate_figure(top = text_grob("Under-20, no predictors - year iterations"))
+gr_it_u20_sp
+```
 
+## Top Countries
+
+```{r it_u20_tops}
+gr_it_u20_sp <- plotIterations(it_u20_sp, labels = TRUE)  %>% annotate_figure(top = text_grob("Under-20, no predictors - year iterations"))
+gr_it_u20_sp
+```
+
+## Removing Top Countries
+
+```{r itco_u20_sp}
+gg_iterateCountries(itco_u20_sp)
+```

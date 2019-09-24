@@ -589,7 +589,7 @@ plotIterations <- function(iteration = it_u18_rateSp, labels = FALSE) {
   
   # find top countries -----------------------------------------------------------------------------------------
   
-  weight_labels <- it_u18_rateSp %>% 
+  weight_labels <- iteration %>% 
     select(iteration, w_weights, mspe) %>% 
     unnest() %>% 
     group_by(iteration) %>% 
@@ -600,7 +600,7 @@ plotIterations <- function(iteration = it_u18_rateSp, labels = FALSE) {
     mutate(weight = paste0(w.weights*100, "%"),
            label = paste0(unit.names, ", ", weight, ", ", "MSPE = ", round(mspe, 3)))
   
-  label_pos <- it_u18_rateSp %>%
+  label_pos <- iteration %>%
     select(gaps) %>%
     map(bind_rows) %>%
     pluck("gaps") %>% 
@@ -613,23 +613,25 @@ plotIterations <- function(iteration = it_u18_rateSp, labels = FALSE) {
   
   
   mspes <-
-    it_u18_rateSp %>% 
+    iteration %>% 
     mutate(groups = as.factor(groups)) %>% 
     ggplot(aes(mspe, fill = groups)) +
     geom_histogram(bins = 100) +
     theme_sphsu_light() +
-    scale_fill_sphsu() 
+    scale_fill_sphsu() +
+    coord_cartesian(clip = "off")
   
   if(labels) {
     mspes <- mspes +
       geom_text(data = label_pos, aes(x = mspe, y = 40, label = label),
                 hjust = 0,
                 angle = 45,
-                inherit.aes = FALSE)
+                inherit.aes = FALSE) +
+      theme(plot.margin = unit(c(0,3,0,0), "cm"))
   }
   
   
-  gaps <- it_u18_rateSp %>%
+  gaps <- iteration %>%
     select(gaps) %>%
     map(bind_rows) %>%
     pluck("gaps") %>% 
@@ -638,7 +640,7 @@ plotIterations <- function(iteration = it_u18_rateSp, labels = FALSE) {
     ggplot(aes(Year, Gap, col = groups, group = iteration)) + 
     geom_line(size = 1, alpha = 0.2) +
     geom_line(data = label_pos, alpha = 1, size = 2) +
-    geom_segment(x = 1985, xend = 1999, y = 0, yend = 0, col = "black") + 
+    geom_segment(x = min(iteration$gaps[[1]]$Year), xend = 1999, y = 0, yend = 0, col = "black") + 
     theme_minimal()+
     theme(panel.grid = element_blank())+
     geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +
@@ -650,10 +652,10 @@ plotIterations <- function(iteration = it_u18_rateSp, labels = FALSE) {
                       hjust = 0,
                       direction = "y",
                       nudge_x = 0.75,
-                      xlim = c(1985, 2010),
+                      xlim = c(NA, 2010),
                       inherit.aes = FALSE,
                       na.rm = TRUE) +
-      theme(plot.margin = unit(c(0,5,0,0), "cm")) +
+      theme(plot.margin = unit(c(0,4,0,0), "cm")) +
       coord_cartesian(clip = 'off')
   }
   
@@ -699,15 +701,17 @@ p <-  md %>%
 
 
 # iterating through removal of top-weighted countries --------------------------------------------------------
-
+gg_iterateCountries <- function(itco) {
+  
 require(purrr)
-itco_u18_sp[[1]]$mspe
+
+  
 order_co <- 
-  itco_u18_sp %>% map( ~ select(.x, label)) %>% 
+  itco %>% map( ~ select(.x, label)) %>% 
   reduce(bind_rows) %>% 
   pull()
 
-itco_u18_sp %>% 
+itco %>% 
   reduce(bind_rows) %>% 
   filter(mspe<5*min(mspe)) %>% 
   select(mspe, unit.names, label, gaps) %>% 
@@ -718,6 +722,7 @@ itco_u18_sp %>%
   theme_minimal() +
   theme(panel.grid = element_blank()) +
   geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +
-  geom_segment(x = 1985, xend = 2013, y = 0, yend = 0, col = "black") +
+  geom_segment(x = min(itco[[1]]$gaps[[1]]$Year), xend = 2013, y = 0, yend = 0, col = "black") +
   scale_colour_sphsu(name = "Top weighted country")
 
+}
