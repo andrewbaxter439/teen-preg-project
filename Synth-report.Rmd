@@ -14,6 +14,7 @@ always_allow_html: yes
 knitr::opts_chunk$set(echo = FALSE, 
                       message = FALSE, 
                       warning = FALSE,
+                      error = FALSE,
                       fig.width = 6,
                       fig.height = 5,
                       dpi = 150,
@@ -116,6 +117,13 @@ pb_plot <-
 ggplotly(pb_plot) #%>% 
 # api_create()
 ```
+```{r pp_u18_sp}
+
+pp_u18_sp <- gg_pre_postMSPE(md_u18_rateSp, pl_u18_rateSp) + labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u18_sp
+
+```
+
 ```{r save_u18_pb_nat, include=FALSE}
 
 # ggsave(plot = pb_plot, "graphs/Synth-u18-sp-gaps.svg", width = 200, height = 150, units = "mm")
@@ -127,13 +135,13 @@ super_md_u18_sp <- tibble()
 for (y in 1995:2005){
     sp <-   purrr::map(sp_u18_rateSp, 
     function(x) list(var = 
-                       ifelse(min(x$yrs)<=y,
+                       ifelse(min(x$yrs)<y,
                        x[[1]],
                        NA),
                      yrs = 
-                       x$yrs[x$yrs<=y],
+                       x$yrs[x$yrs<y],
                      op = 
-                       ifelse(min(x$yrs)<=y,
+                       ifelse(min(x$yrs)<y,
                        x[[3]],
                        NA))) %>% 
   purrr::modify_if(anyNA, function(x) NULL)
@@ -163,7 +171,7 @@ dp <- dataprep(
 ```{r u18_pb_time_graph}
 tb_u18_sp <- super_md_u18_sp %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
-  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 20), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
+  geom_segment(aes(x = IntYr-0.5, xend = IntYr-0.5, y = 0, yend = 20), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
   geom_line(size = 1.5) +
   theme_sphsu_light() +
   ylab(paste0("Under-18 birth rate (per 1,000 women)")) +
@@ -206,10 +214,7 @@ synthPrep(synthData_u18[,1:5] %>% filter(!Country %in% exclude_u18_gdp_1990),
           "u18_gdp",
           dependent = "rate",
           predictors = "GDPperCap",
-          special.predictors = list(
-            list("rate", 1990:1994, "mean"),
-            list("rate", 1995:1998, "mean")
-          ),
+          special.predictors = sp_u18_gdp_1990,
           time.optimise.ssr = opt_y1:1998,
           time.predictors.prior = 1990:1998,
           time.plot = 1990:2013)
@@ -236,11 +241,17 @@ st_u18_gdp$tab.v %>% kable()
 ### Placebo testing by country and time
 ```{r plot_u18_gdp_pb_nat}
 # gaps graph
-pb_plot <- gg_gaps(md_u18_gdp, pl_u18_gdp) +
+pb_plot <- gg_gaps(md_u18_gdp, pl_u18_gdp %>% filter(Year>1989)) +
   labs(title = "England vs Synthetic Control, GDP as predictor - country placebo")
 
 ggplotly(pb_plot) #%>% 
 # api_create()
+```
+```{r pp_u18_gdp}
+
+pp_u18_gdp <- gg_pre_postMSPE(md_u18_gdp, pl_u18_gdp) + labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u18_gdp
+
 ```
 ```{r save_u18_gdp_pb_nat, include=FALSE}
 
@@ -252,33 +263,33 @@ ggplotly(pb_plot) #%>%
 super_md_u18_gdp <- tibble()
 
 for (y in 1995:2005){
-    sp <-   purrr::map(sp_u18_gdp, 
+    sp <-   purrr::map(sp_u18_gdp_1990, 
     function(x) list(var = 
-                       ifelse(min(x$yrs)<=y,
+                       ifelse(min(x$yrs)<y,
                        x[[1]],
                        NA),
                      yrs = 
-                       x$yrs[x$yrs<=y],
+                       x$yrs[x$yrs<y],
                      op = 
-                       ifelse(min(x$yrs)<=y,
+                       ifelse(min(x$yrs)<y,
                        x[[3]],
                        NA))) %>% 
   purrr::modify_if(anyNA, function(x) NULL)
 
 dp <- dataprep(
-  foo = synthData_u18[,1:5] %>% filter(!Country %in% exclude_u18_gdp),
+  foo = synthData_u18[,1:5] %>% filter(!Country %in% exclude_u18_gdp_1990),
   special.predictors = sp,
   predictors = "GDPperCap",
   predictors.op = "mean",
-  time.predictors.prior = 1985:y,
+  time.predictors.prior = opt_y1:y,
   dependent = "rate",
   unit.variable = "Code",
   unit.names.variable = "Country",
   time.variable = "Year",
   treatment.identifier = u_18_ccodes$Code[u_18_ccodes$Country =="England and Wales"],
-  controls.identifier = u_18_ccodes %>% filter(!Country %in% exclude_u18_all, Country != "England and Wales") %>% pull(Code),
+  controls.identifier = u_18_ccodes %>% filter(!Country %in% exclude_u18_gdp_1990, Country != "England and Wales") %>% pull(Code),
   time.optimize.ssr = opt_y1:y,
-  time.plot = 1985:2013
+  time.plot = opt_y1:2013
 )
   md <- predvalues_synth(dp, synth_outputs = FALSE, yr = y)
   md <- md %>% 
@@ -292,7 +303,7 @@ dp <- dataprep(
 # placebo graph
 tp_u18_gdp_plotly <- super_md_u18_gdp %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
-  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 20), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
+  geom_segment(aes(x = IntYr-0.5, xend = IntYr-0.5, y = 0, yend = 20), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
   geom_line(size = 1.5) +
   theme_sphsu_light() +
   ylab(paste0("Under-18 birth rate (per 1,000 women)")) +
@@ -309,7 +320,7 @@ tp_u18_gdp_plotly <- tp_u18_gdp_plotly %>%
   animation_opts(easing = 'sin-in-out')
 
 tp_u18_gdp_plotly
-# api_create(tp_u18_gdp_plotly, filename = "England under-18 - GDP per capita as predictor - placebo time")
+api_create(tp_u18_gdp_plotly, filename = "England under-18 - GDP per capita as predictor - placebo time")
 
 ```
 
@@ -335,13 +346,10 @@ synthPrep(synthData_u18 %>% filter(!Country %in% exclude_u18_all_1990),
           "u18_all",
           dependent = "rate",
           predictors = c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"),
-          special.predictors = list(
-            list("rate", 1990:1994, "mean"),
-            list("rate", 1995:1998, "mean")
-          ),
+          special.predictors = sp_u18_all_1990,
           time.optimise.ssr = opt_y1:1998,
-          time.predictors.prior = 1990:1998,
-          time.plot = 1990:2013)
+          time.predictors.prior = opt_y1:1998,
+          time.plot = opt_y1:2013)
 ```
 ```{r md_u18_all_graph}
 # graph
@@ -366,11 +374,17 @@ st_u18_all$tab.v %>% kable()
 ```{r plot_u18_all_pb_nat}
 # gaps graph
 pb_plot <- 
-gg_gaps(md_u18_all, pl_u18_all) + 
+gg_gaps(md_u18_all, pl_u18_all %>% filter(Year>1989)) + 
   labs(title = "England vs Synthetic Control, all predictors - country placebo")
 
 ggplotly(pb_plot) #%>% 
 # api_create()
+```
+```{r pp_u18_all}
+
+pp_u18_all <- gg_pre_postMSPE(md_u18_all, pl_u18_all) + labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u18_all
+
 ```
 ```{r save_u18_all_pb_nat, include=FALSE}
 # ggsave(plot = pb_plot,"graphs/Synth-u18-all-gaps.svg", width = 200, height = 150, units = "mm")
@@ -382,33 +396,33 @@ super_md_u18_all <- tibble()
 
 for (y in 1995:2005){
   
-  sp <-   purrr::map(sp_u18_all, 
+  sp <-   purrr::map(sp_u18_all_1990, 
     function(x) list(var = 
-                       ifelse(min(x$yrs)<=y,
+                       ifelse(min(x$yrs)<y,
                        x[[1]],
                        NA),
                      yrs = 
-                       x$yrs[x$yrs<=y],
+                       x$yrs[x$yrs<y],
                      op = 
-                       ifelse(min(x$yrs)<=y,
+                       ifelse(min(x$yrs)<y,
                        x[[3]],
                        NA))) %>% 
   purrr::modify_if(anyNA, function(x) NULL)
 
 dp <- dataprep(
-  foo = synthData_u18 %>% filter(!Country %in% exclude_u18_all),
+  foo = synthData_u18 %>% filter(!Country %in% exclude_u18_all_1990),
   special.predictors = sp,
   predictors = c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"),
   predictors.op = "mean",
-  time.predictors.prior = 1985:y,
+  time.predictors.prior = opt_y1:y,
   dependent = "rate",
   unit.variable = "Code",
   unit.names.variable = "Country",
   time.variable = "Year",
   treatment.identifier = u_18_ccodes$Code[u_18_ccodes$Country =="England and Wales"],
-  controls.identifier = u_18_ccodes %>% filter(!Country %in% exclude_u18_all, Country != "England and Wales") %>% pull(Code),
+  controls.identifier = u_18_ccodes %>% filter(!Country %in% exclude_u18_all_1990, Country != "England and Wales") %>% pull(Code),
   time.optimize.ssr = opt_y1:y,
-  time.plot = 1985:2013
+  time.plot = opt_y1:2013
 )
   md <- predvalues_synth(dp, synth_outputs = FALSE, yr = y)
   md <- md %>% 
@@ -421,8 +435,8 @@ dp <- dataprep(
 ```{r u18_all_pb_time_graph}
 # placebo graph
 tp_u18_all_plotly <- super_md_u18_all %>% 
-  ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
-  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 20), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
+  ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr+1)) +
+  geom_segment(aes(x = IntYr-0.5, xend = IntYr-0.5, y = 0, yend = 20), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
   geom_line(size = 1.5) +
   theme_sphsu_light() +
   ylab(paste0("Under-18 birth rate (per 1,000 women)")) +
@@ -439,7 +453,7 @@ tp_u18_all_plotly <- tp_u18_all_plotly %>%
   animation_opts(easing = 'sin-in-out')
   
   tp_u18_all_plotly
-  # api_create(tp_u18_all_plotly, filename = "England under-18 - all predictors - placebo time")
+  api_create(tp_u18_all_plotly, filename = "England under-18 - all predictors - placebo time")
 ```
 
 # Generating Synthetic Control models for all Under-20 comparisons
@@ -483,6 +497,12 @@ gg_gaps(md_u20_sp, pl_u20_sp) +
 ggplotly(pb_plot)# %>% 
 # api_create()
 ```
+```{r pp_u20_sp}
+
+pp_u20_sp <- gg_pre_postMSPE(md_u20_sp, pl_u20_sp) + labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u20_sp
+
+```
 ```{r save_u20_sp_pb_nat, include=FALSE}
 # ggsave(plot = pb_plot, "graphs/Synth-u20-sp-gaps.svg", width = 200, height = 150, units = "mm")
 ```
@@ -494,13 +514,13 @@ super_md_u20_sp <- tibble()
 for (y in 1995:2005){
     sp <-   purrr::map(sp_u20_sp, 
     function(x) list(var = 
-                       ifelse(min(x$yrs)<=y,
+                       ifelse(min(x$yrs)<y,
                        x[[1]],
                        NA),
                      yrs = 
-                       x$yrs[x$yrs<=y],
+                       x$yrs[x$yrs<y],
                      op = 
-                       ifelse(min(x$yrs)<=y,
+                       ifelse(min(x$yrs)<y,
                        x[[3]],
                        NA))) %>% 
   purrr::modify_if(anyNA, function(x) NULL)
@@ -531,7 +551,7 @@ dp <- dataprep(
 # placebo graph
 tp_u20_sp_plotly <- super_md_u20_sp %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
-  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 80), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
+  geom_segment(aes(x = IntYr-0.5, xend = IntYr-0.5, y = 0, yend = 80), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
   geom_line(size = 1.5) +
   theme_sphsu_light() +
   ylab(paste0("Under-20 pregnancy rate (per 1,000 women)")) +
@@ -592,6 +612,12 @@ gg_gaps(md_u20_gdp, pl_u20_gdp) +
 ggplotly(pb_plot) #%>% 
 # api_create()
 ```
+```{r pp_u20_gdp}
+
+pp_u20_gdp <- gg_pre_postMSPE(md_u20_gdp, pl_u20_gdp) + labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u20_gdp
+
+```
 ```{r save_u20_gdp_pb_nat, include=FALSE}
 # ggsave(plot = pb_plot, "graphs/Synth-u20-gdp-gaps.svg", width = 200, height = 150, units = "mm")
 ```
@@ -604,13 +630,13 @@ for (y in 1995:2005){
   
 sp <-   purrr::map(sp_u20_gdp, 
     function(x) list(var = 
-                       ifelse(min(x$yrs)<=y,
+                       ifelse(min(x$yrs)<y,
                        x[[1]],
                        NA),
                      yrs = 
-                       x$yrs[x$yrs<=y],
+                       x$yrs[x$yrs<y],
                      op = 
-                       ifelse(min(x$yrs)<=y,
+                       ifelse(min(x$yrs)<y,
                        x[[3]],
                        NA))) %>% 
   purrr::modify_if(anyNA, function(x) NULL)
@@ -642,7 +668,7 @@ dp <- dataprep(
 # placebo graph
 tp_u20_gdp_plotly <- super_md_u20_gdp %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
-  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 80), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
+  geom_segment(aes(x = IntYr-0.5, xend = IntYr-0.5, y = 0, yend = 80), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
   geom_line(size = 1.5) +
   theme_sphsu_light() +
   ylab(paste0("Under-20 pregnancy rate (per 1,000 women)")) +
@@ -703,6 +729,12 @@ gg_gaps(md_u20_all, pl_u20_all) +
 ggplotly(pb_plot) #%>% 
 # api_create()
 ```
+```{r pp_u20_all}
+
+pp_u20_all <- gg_pre_postMSPE(md_u20_all, pl_u20_all) + labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u20_all
+
+```
 ```{r save_u20_all_pb_nat, include=FALSE}
 # ggsave(plot = pb_plot, "graphs/Synth-u20-all-gaps.svg", width = 200, height = 150, units = "mm")
 ```
@@ -714,13 +746,13 @@ super_md_u20_all <- tibble()
 for (y in 1995:2005){
       sp <-   purrr::map(sp_u20_all, 
     function(x) list(var = 
-                       ifelse(min(x$yrs)<=y,
+                       ifelse(min(x$yrs)<y,
                        x[[1]],
                        NA),
                      yrs = 
-                       x$yrs[x$yrs<=y],
+                       x$yrs[x$yrs<y],
                      op = 
-                       ifelse(min(x$yrs)<=y,
+                       ifelse(min(x$yrs)<y,
                        x[[3]],
                        NA))) %>% 
   purrr::modify_if(anyNA, function(x) NULL)
@@ -752,7 +784,7 @@ dp <- dataprep(
 # placebo graph
 tp_u20_all_plotly <- super_md_u20_all %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
-  geom_segment(aes(x = IntYr, xend = IntYr, y = 0, yend = 80), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
+  geom_segment(aes(x = IntYr-0.5, xend = IntYr-0.5, y = 0, yend = 80), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
   geom_line(size = 1.5) +
   theme_sphsu_light() +
   ylab(paste0("Under-20 pregnancy rate (per 1,000 women)")) +

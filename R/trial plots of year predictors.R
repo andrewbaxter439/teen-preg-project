@@ -3,37 +3,38 @@ load("Data/iterations.rdata")
 source("R/Synth_functions.R")
 # plot function ----------------------------------------------------------------------------------------------
 
-plotIterations <- function(iteration = it_u18_rateSp) {
+plotIterations <- function(iteration = it_u18_rateSp, labels = FALSE) {
   
   require(dplyr)
   require(ggplot2)
   require(SPHSUgraphs)
   require(purrr)
   require(ggpubr)
+  require(tidyr)
   
-  mspes <- iteration %>% 
-  mutate(groups = as.factor(groups)) %>% 
-  ggplot(aes(mspe, fill = groups)) +
-  geom_histogram(bins = 50) +
-  theme_sphsu_light() +
-  scale_fill_sphsu()
-  
-  gaps <- iteration %>% 
-  select(gaps) %>%
-  map(bind_rows) %>%
-  pluck("gaps") %>% 
-  mutate(groups = as.factor(groups)) %>% 
-  ggplot(aes(Year, Gap, group = iteration, col = groups)) + 
-  geom_segment(x = 1985, xend = 2013, y = 0, yend = 0, col = "black") + 
-  geom_line(size = 1, alpha = 0.8) +
-  theme_minimal()+
-  theme(panel.grid = element_blank())+
-  geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +
-  scale_colour_sphsu()
-
-ggarrange(mspes, gaps, ncol = 2, common.legend = TRUE, legend = "right")
-  
-}
+#   mspes <- iteration %>% 
+#   mutate(groups = as.factor(groups)) %>% 
+#   ggplot(aes(mspe, fill = groups)) +
+#   geom_histogram(bins = 50) +
+#   theme_sphsu_light() +
+#   scale_fill_sphsu()
+#   
+#   gaps <- iteration %>% 
+#   select(gaps) %>%
+#   map(bind_rows) %>%
+#   pluck("gaps") %>% 
+#   mutate(groups = as.factor(groups)) %>% 
+#   ggplot(aes(Year, Gap, group = iteration, col = groups)) + 
+#   geom_segment(x = 1985, xend = 2013, y = 0, yend = 0, col = "black") + 
+#   geom_line(size = 1, alpha = 0.8) +
+#   theme_minimal()+
+#   theme(panel.grid = element_blank())+
+#   geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +
+#   scale_colour_sphsu()
+# 
+# ggarrange(mspes, gaps, ncol = 2, common.legend = TRUE, legend = "right")
+#   
+# }
 
 # find top countries -----------------------------------------------------------------------------------------
 
@@ -52,7 +53,7 @@ label_pos <- it_u18_rateSp %>%
   select(gaps) %>%
   map(bind_rows) %>%
   pluck("gaps") %>% 
-  # filter(Year==1998) %>% 
+  filter(Year<=1998) %>%
   mutate(groups = as.factor(groups)) %>% 
   inner_join(weight_labels, by = "iteration") %>% 
   mutate(label = ifelse(Year == 1998, label, NA))
@@ -66,12 +67,15 @@ mspes <-
   ggplot(aes(mspe, fill = groups)) +
   geom_histogram(bins = 100) +
   theme_sphsu_light() +
-  scale_fill_sphsu() +
+  scale_fill_sphsu() 
+
+if(labels) {
+  mspes <- mspes +
   geom_text(data = label_pos, aes(x = mspe, y = 40, label = label),
             hjust = 0,
             angle = 45,
             inherit.aes = FALSE)
-
+}
 
 
 gaps <- it_u18_rateSp %>%
@@ -87,9 +91,10 @@ gaps <- it_u18_rateSp %>%
   theme_minimal()+
   theme(panel.grid = element_blank())+
   geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +
-  scale_colour_sphsu() +
-  theme(legend.position = "top",
-        plot.margin = unit(c(0,5,0,0), "cm")) +
+  scale_colour_sphsu()
+
+if(labels){
+  gaps <- gaps +
   geom_text_repel(data = label_pos %>% filter(Year == 1998), aes(x = 1998, y = Gap, label = unit.names),
             hjust = 0,
             direction = "y",
@@ -97,9 +102,13 @@ gaps <- it_u18_rateSp %>%
             xlim = c(1985, 2010),
             inherit.aes = FALSE,
             na.rm = TRUE) +
+  theme(plot.margin = unit(c(0,5,0,0), "cm")) +
   coord_cartesian(clip = 'off')
+}
 
 ggarrange(mspes, gaps, ncol = 2, common.legend = TRUE, legend = "bottom")
+
+}
 ggsave("graphs/Under 18 pregnancies - testing iterations.png", height = 200, width = 400, units = "mm")
 
 

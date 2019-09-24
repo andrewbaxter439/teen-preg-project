@@ -539,40 +539,160 @@ md <- tibble(Year = as.numeric(rownames(dp$Y1)), Treated = dp$Y1[,1], Synthetic 
 
 # iterating through year permutations ------------------------------------------------------------------------
 
-plotIterations <- function(iteration = it_u18_rateSp, post = FALSE) {
+# plotIterations <- function(iteration = it_u18_rateSp, post = FALSE) {
+#   
+#   require(dplyr)
+#   require(ggplot2)
+#   require(SPHSUgraphs)
+#   require(purrr)
+#   require(ggpubr)
+#   require(tidyr)
+#   
+#   mspes <- iteration %>% 
+#     mutate(groups = as.factor(groups)) %>% 
+#     ggplot(aes(mspe, fill = groups)) +
+#     geom_histogram(bins = 50) +
+#     theme_sphsu_light() +
+#     scale_fill_sphsu()
+#   
+#   gaps <- iteration %>% 
+#     select(gaps) %>%
+#     map(bind_rows) %>%
+#     pluck("gaps") %>% 
+#     mutate(groups = as.factor(groups))
+#   
+#   if (!post) {
+#     gaps <- gaps %>% filter(Year<1999)
+#   }
+#   
+#   ggraph <- gaps %>% 
+#     ggplot(aes(Year, Gap, group = iteration, col = groups)) + 
+#     geom_segment(x = 1985, xend = 2013, y = 0, yend = 0, col = "black") + 
+#     geom_line(size = 1, alpha = 0.8) +
+#     theme_minimal()+
+#     theme(panel.grid = element_blank())+
+#     geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +
+#     scale_colour_sphsu()
+#   
+#   ggarrange(mspes, ggraph, ncol = 2, common.legend = TRUE, legend = "right")
+#   
+# }
+
+plotIterations <- function(iteration = it_u18_rateSp, labels = FALSE) {
   
   require(dplyr)
   require(ggplot2)
   require(SPHSUgraphs)
   require(purrr)
   require(ggpubr)
+  require(tidyr)
   
-  mspes <- iteration %>% 
-    mutate(groups = as.factor(groups)) %>% 
-    ggplot(aes(mspe, fill = groups)) +
-    geom_histogram(bins = 50) +
-    theme_sphsu_light() +
-    scale_fill_sphsu()
+  # find top countries -----------------------------------------------------------------------------------------
   
-  gaps <- iteration %>% 
+  weight_labels <- it_u18_rateSp %>% 
+    select(iteration, w_weights, mspe) %>% 
+    unnest() %>% 
+    group_by(iteration) %>% 
+    top_n(1,w.weights) %>% 
+    ungroup() %>% 
+    group_by(unit.names) %>% 
+    top_n(1, -mspe) %>% 
+    mutate(weight = paste0(w.weights*100, "%"),
+           label = paste0(unit.names, ", ", weight, ", ", "MSPE = ", round(mspe, 3)))
+  
+  label_pos <- it_u18_rateSp %>%
     select(gaps) %>%
     map(bind_rows) %>%
     pluck("gaps") %>% 
-    mutate(groups = as.factor(groups))
+    filter(Year<=1998) %>%
+    mutate(groups = as.factor(groups)) %>% 
+    inner_join(weight_labels, by = "iteration") %>% 
+    mutate(label = ifelse(Year == 1998, label, NA))
   
-  if (!post) {
-    gaps <- gaps %>% filter(Year<1999)
+  # Under-18 special predictors --------------------------------------------------------------------------------
+  
+  
+  mspes <-
+    it_u18_rateSp %>% 
+    mutate(groups = as.factor(groups)) %>% 
+    ggplot(aes(mspe, fill = groups)) +
+    geom_histogram(bins = 100) +
+    theme_sphsu_light() +
+    scale_fill_sphsu() 
+  
+  if(labels) {
+    mspes <- mspes +
+      geom_text(data = label_pos, aes(x = mspe, y = 40, label = label),
+                hjust = 0,
+                angle = 45,
+                inherit.aes = FALSE)
   }
   
-  ggraph <- gaps %>% 
-    ggplot(aes(Year, Gap, group = iteration, col = groups)) + 
-    geom_segment(x = 1985, xend = 2013, y = 0, yend = 0, col = "black") + 
-    geom_line(size = 1, alpha = 0.8) +
+  
+  gaps <- it_u18_rateSp %>%
+    select(gaps) %>%
+    map(bind_rows) %>%
+    pluck("gaps") %>% 
+    mutate(groups = as.factor(groups)) %>% 
+    filter(Year<1999) %>% 
+    ggplot(aes(Year, Gap, col = groups, group = iteration)) + 
+    geom_line(size = 1, alpha = 0.2) +
+    geom_line(data = label_pos, alpha = 1, size = 2) +
+    geom_segment(x = 1985, xend = 1999, y = 0, yend = 0, col = "black") + 
     theme_minimal()+
     theme(panel.grid = element_blank())+
     geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +
     scale_colour_sphsu()
   
-  ggarrange(mspes, ggraph, ncol = 2, common.legend = TRUE, legend = "right")
+  if(labels){
+    gaps <- gaps +
+      geom_text_repel(data = label_pos %>% filter(Year == 1998), aes(x = 1998, y = Gap, label = unit.names),
+                      hjust = 0,
+                      direction = "y",
+                      nudge_x = 0.75,
+                      xlim = c(1985, 2010),
+                      inherit.aes = FALSE,
+                      na.rm = TRUE) +
+      theme(plot.margin = unit(c(0,5,0,0), "cm")) +
+      coord_cartesian(clip = 'off')
+  }
   
+  ggarrange(mspes, gaps, ncol = 2, common.legend = TRUE, legend = "bottom")
+  
+}
+
+
+# plot mspe ratios -------------------------------------------------------------------------------------------
+
+# pre-post mspe ratios ---------------------------------------------------------------------------------------
+
+gg_pre_postMSPE <- function(md, pl){
+  
+p <-  md %>% 
+    spread(Group, Rate) %>% 
+    mutate(Gap = Treated - Synthetic,
+           Country = "England and Wales") %>% 
+    select(Year, Country, Gap) %>% 
+    bind_rows(pl %>% select(Year, Country, Gap)) %>% 
+    mutate(period = ifelse(Year<1999, "pre", "post")) %>% 
+    group_by(Country, period) %>% 
+    summarise(mspe = mean(Gap**2)) %>% 
+    spread(period, mspe) %>% 
+    mutate(ratio = post/pre,
+           label = ifelse(Country=="England and Wales", paste0("England and Wales; ratio = ", signif(ratio, 3)), NA),
+           xintercept = ifelse(Country=="England and Wales", ratio, NA)) %>% 
+    ggplot(aes(ratio)) +
+    geom_histogram(fill = sphsu_cols("University Blue"), col = "darkgrey") +
+    theme_minimal() + 
+  theme(panel.grid = element_blank())
+
+  ggp <- ggplot_build(p)
+  
+  ytop <- max(ggp[["data"]][[1]][["count"]])
+  
+  p <-   p + geom_text(aes(x = xintercept, label = label),vjust = 0, hjust = 0, y = ytop + 0.1, inherit.aes = FALSE) +
+    geom_segment(aes(x = xintercept, xend = xintercept), y = 0, yend = ytop, inherit.aes = FALSE) +
+    ylim(0, ytop + 0.25)
+  
+  return(p)
 }

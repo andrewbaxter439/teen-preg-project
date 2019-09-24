@@ -1,17 +1,17 @@
 ---
-title: "Year permutation iterations"
+title: "Model-testing iterations"
 author: "Andrew Baxter"
 date: "19/09/2019"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, error = FALSE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, error = FALSE, warning = FALSE, fig.width = 10)
 
-# library(dplyr)
-# library(purrr)
-# library(svglite)
+library(dplyr)
+library(svglite)
 # library(SPHSUgraphs)
+# library(purrr)
 
 `-.gg` <- function(e1, e2) e2(e1)
 ```
@@ -19,6 +19,7 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, error = FALSE)
 ```{r load_data, include = FALSE}
 load('Data/synth_data.rdata') # outputted from 'Synth_data.R'
 load("Data/iterations.rdata")
+load("Data/iterating_rm_countries.rdata")
 source('R/Synth_functions.R')
 ```
 
@@ -31,4 +32,38 @@ gr_it_u18_sp
 
 ## Top countries
 
+Differing iterations produced different country weightings. I exctracted the top country for each iteration and plotted the lowest MSPE for the top four countries:
+
 ```{r it_u18_tops}
+gr_it_u18_sp <- plotIterations(it_u18_rateSp, labels = TRUE)  %>% annotate_figure(top = text_grob("Under-18, no predictors - year iterations"))
+gr_it_u18_sp
+```
+
+## Removing top countries
+
+A further iterative cycle constructed sequential synthetic controls, removing the previous top-weighted country to test for over-reliance on very few abnormal countries:
+
+```{r itco_u18_sp}
+order_co <- 
+  itco_u18_sp %>% map( ~ select(.x, label)) %>% 
+    reduce(bind_rows) %>% 
+    pull()
+
+itco_u18_sp %>% 
+  reduce(bind_rows) %>% 
+  filter(mspe<5*min(mspe)) %>% 
+  select(mspe, unit.names, label, gaps) %>% 
+  unnest(gaps) %>% 
+  mutate(label = factor(label, levels = order_co)) %>% 
+  ggplot(aes(Year, Gap)) + 
+  geom_line(size = 1, alpha = 0.8, aes(col = label)) + 
+  theme_minimal() +
+  theme(panel.grid = element_blank()) +
+  geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +
+  geom_segment(x = 1985, xend = 2013, y = 0, yend = 0, col = "black") +
+  scale_colour_sphsu(name = "Top weighted country")
+
+```
+
+
+

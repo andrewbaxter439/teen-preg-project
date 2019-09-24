@@ -104,6 +104,14 @@ it_u18_all %>%
   group_by(groups) %>% 
   top_n(3, -mspe)  
 
+it_u18_gdp_1990 %>% 
+  group_by(groups) %>% 
+  top_n(3, -mspe)  
+
+it_u18_all_1990 %>% 
+  group_by(groups) %>% 
+  top_n(3, -mspe)  
+
 it_u20_sp %>% 
   group_by(groups) %>% 
   top_n(3, -mspe)  
@@ -122,6 +130,8 @@ sp_u18_all <- it_u18_all$sPred[it_u18_all$iteration == 9][[1]]
 sp_u20_sp <- it_u20_sp$sPred[it_u20_sp$iteration == 18][[1]]
 sp_u20_gdp <- it_u20_gdp$sPred[it_u20_gdp$iteration == 9][[1]]
 sp_u20_all <- it_u20_all$sPred[it_u20_all$iteration == 9][[1]]
+sp_u18_gdp_1990 <- it_u18_gdp_1990$sPred[it_u18_gdp_1990$iteration == 9][[1]]
+sp_u18_all_1990 <- it_u18_all_1990$sPred[it_u18_all_1990$iteration == 9][[1]]
 
 save(
   sp_u18_rateSp,
@@ -130,6 +140,8 @@ save(
   sp_u20_sp,
   sp_u20_gdp,
   sp_u20_all,
+  sp_u18_gdp_1990,
+  sp_u18_all_1990,
   file = "Data/special_preds.rdata"
 )
 
@@ -198,7 +210,7 @@ return(it_c)
 }
 
 
-save(itco_u18_sp, itco_u18_sp_1990, itco_u20_sp, file = "Data/iterating_rm_countries.rdata")
+itco_u18_sp <- iterateCountries(Margin.ipop=.005,Sigf.ipop=7,Bound.ipop=6)
 
 itco_u18_sp_1990 <- iterateCountries(data = synthData_u18[,1:4], 
                                      ccodes = u_18_ccodes,
@@ -209,3 +221,5 @@ itco_u18_sp_1990 <- iterateCountries(data = synthData_u18[,1:4],
 itco_u20_sp <- iterateCountries(data = synthData_u20[,1:4], ccodes = u_20_ccodes, pred = "pRate", start = 1990,
                                 n=4,
                                 Margin.ipop=.005,Sigf.ipop=7,Bound.ipop=6)
+
+save(itco_u18_sp, itco_u18_sp_1990, itco_u20_sp, file = "Data/iterating_rm_countries.rdata")
