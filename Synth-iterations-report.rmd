@@ -67,6 +67,28 @@ itco_u18_sp %>%
 
 ```
 
+# Under-18 - from 1990-2013 - no predictors
+
+```{r it_u18_1990_plots}
+gr_it_u18_1990 <- plotIterations(it_u18_sp_1990) %>% annotate_figure(top = text_grob("Under-18, no predictors - year iterations"))
+gr_it_u18_1990
+
+```
+
+## Top Countries
+
+```{r it_u18_1990_tops}
+gr_it_u18_1990 <- plotIterations(it_u18_sp_1990, labels = TRUE)
+gr_it_u18_1990
+
+```
+
+## Removing Top Countries
+```{r itco_u18_1990}
+gg_iterateCountries(itco_u18_sp_1990)
+
+```
+
 # Under-20 - no added predictors
 
 ```{r it_u20_plots}

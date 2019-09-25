@@ -639,7 +639,6 @@ plotIterations <- function(iteration = it_u18_rateSp, labels = FALSE) {
     filter(Year<1999) %>% 
     ggplot(aes(Year, Gap, col = groups, group = iteration)) + 
     geom_line(size = 1, alpha = 0.2) +
-    geom_line(data = label_pos, alpha = 1, size = 2) +
     geom_segment(x = min(iteration$gaps[[1]]$Year), xend = 1999, y = 0, yend = 0, col = "black") + 
     theme_minimal()+
     theme(panel.grid = element_blank())+
@@ -648,6 +647,7 @@ plotIterations <- function(iteration = it_u18_rateSp, labels = FALSE) {
   
   if(labels){
     gaps <- gaps +
+    geom_line(data = label_pos, alpha = 1, size = 2) +
       geom_text_repel(data = label_pos %>% filter(Year == 1998), aes(x = 1998, y = Gap, label = unit.names),
                       hjust = 0,
                       direction = "y",
@@ -684,7 +684,7 @@ p <-  md %>%
            label = ifelse(Country=="England and Wales", paste0("England and Wales; ratio = ", signif(ratio, 3)), NA),
            xintercept = ifelse(Country=="England and Wales", ratio, NA)) %>% 
     ggplot(aes(ratio)) +
-    geom_histogram(fill = sphsu_cols("University Blue"), col = "darkgrey") +
+    geom_histogram(fill = sphsu_cols("Cobalt"), col = "darkgrey") +
     theme_minimal() + 
   theme(panel.grid = element_blank())
 

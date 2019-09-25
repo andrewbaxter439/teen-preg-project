@@ -1,16 +1,16 @@
 library(dplyr)
 library(ggplot2)
 library(SPHSUgraphs)
+source("R/Synth_data.R")
 
 df <- synthData %>% 
-  filter(Year == 2010, agegrp == "Under 18", !is.na(GDPperCap)) %>% 
+  filter(Year == 1998, agegrp == "Under 18", !is.na(GDPperCap)) %>% 
   select(Country, GDPperCap, rate)
 
 df %>% 
   mutate(cluster = kmeans(scale(df[,2:3]), 4)$cluster) %>% 
   ggplot(aes(GDPperCap, rate, col = factor(cluster))) +
   geom_text(aes(label = Country))
-
 
 kmeans_table <- c()
 for (i in 1:15){
@@ -31,8 +31,8 @@ plot(hclust.out)
 
 # Under 18 ---------------------------------------------------------------------------------------------------
 
-df1 <- synthData_U20 %>% 
-  filter(Year == 2010, Country != "New Zealand") %>%
+df1 <- synthData_u20 %>% 
+  filter(Year == 1998, Country != "New Zealand") %>%
   select(Country, GDPperCap, pRate)
 
 df1[which(df1$Country %in% c("Scotland", "England and Wales")),"GDPperCap"] <- synthData %>% filter(Country == "United Kingdom", Year == 2010) %>% select(GDPperCap) %>% unique() %>% pull()

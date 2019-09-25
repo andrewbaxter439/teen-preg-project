@@ -2,7 +2,13 @@
 title: "Synth reporting"
 author: "Andrew Baxter"
 date: "10/09/2019"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    toc_float: 
+      collapsed: false
   # word_document:
   #   fig_height: 6
   #   fig_width: 8
@@ -39,6 +45,18 @@ load('Data/special_preds.rdata')  # outputted from 'Synth_create_sps.R'
 load("Data/placebos_country.rdata")  # outputted from 'Synth_create_sps.R'
 load("Data/time_placebos.rdata")  # outputted from 'Synth_time_pbs.R'
 source('R/Synth_functions.R')
+```
+```{r results='asis'}
+cat("
+<style>
+caption {
+      color: black;
+      font-weight: bold;
+      font-size: 1.0em;
+    }
+</style>
+")
+
 ```
 
 # Setting up data
@@ -92,16 +110,19 @@ gr_u18_rateSp <- gg_synth(md = md_u18_rateSp, post = TRUE)
 
 gr_u18_rateSp + labs(title = sPredText(dp_u18_rateSp))
 
-# ggsave("graphs/Synth-u18-sp.svg", width = 200, height = 150, units = "mm")
+#  ggsave("graphs/Synth-u18-sp.svg", width = 200, height = 150, units = "mm")
 
 ```
 
-### Weights
+### Weights and balance
 
 ```{r st_u18_rateSp_w}
 st_u18_rateSp$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, Weight = w.weights) %>% 
-  kable()
-st_u18_rateSp$tab.v %>% kable()
+  kable(caption = "Country weights")
+
+st_u18_rateSp$tab.v %>% kable(caption = "Predictor weights")
+
+st_u18_rateSp$tab.pred %>% kable(caption = "Predictor balance between synthetic and treated units")
 ```
 
 
@@ -114,8 +135,8 @@ pb_plot <-
   #       title = element_text(size = 12)) +
   labs(title = "England vs Synthetic Control, no added predictors - country placebo")
 
-ggplotly(pb_plot) #%>% 
-# api_create()
+ggplotly(pb_plot)  # %>% 
+#  api_create(filename = "Plot 43")
 ```
 ```{r pp_u18_sp}
 
@@ -125,8 +146,8 @@ pp_u18_sp
 ```
 
 ```{r save_u18_pb_nat, include=FALSE}
-
-# ggsave(plot = pb_plot, "graphs/Synth-u18-sp-gaps.svg", width = 200, height = 150, units = "mm")
+#  ggsave(plot = pp_u18_sp, "graphs/Synth-u18-sp-pp-ratio.svg", width = 200, height = 150, units = "mm")
+#  ggsave(plot = pb_plot, "graphs/Synth-u18-sp-gaps.svg", width = 200, height = 150, units = "mm")
 ```
 
 ```{r u18_pb_time, eval=FALSE, include=FALSE}
@@ -190,7 +211,7 @@ tp_u18_sp_plotly <- ggplotly(tb_u18_sp) %>%
   animation_opts(easing = 'sin-in-out')
 
 tp_u18_sp_plotly
-# api_create(tp_u18_sp_plotly, filename = "England under-18 - special predictors - placebo time")
+#  api_create(tp_u18_sp_plotly, filename = "England under-18 - special predictors - placebo time")
 
 ```
 
@@ -214,7 +235,8 @@ synthPrep(synthData_u18[,1:5] %>% filter(!Country %in% exclude_u18_gdp_1990),
           "u18_gdp",
           dependent = "rate",
           predictors = "GDPperCap",
-          special.predictors = sp_u18_gdp_1990,
+          special.predictors = sp_u18_sp_1990,
+          # special.predictors = sp_u18_gdp_1990,
           time.optimise.ssr = opt_y1:1998,
           time.predictors.prior = 1990:1998,
           time.plot = 1990:2013)
@@ -226,16 +248,19 @@ gr_u18_gdp <- gg_synth(md = md_u18_gdp, post = TRUE)
 
 gr_u18_gdp + labs(title = sPredText(dp_u18_gdp))
 
-# ggsave("graphs/Synth-u18-gdp.svg", width = 200, height = 150, units = "mm")
-# ggsave("graphs/Synth-u18-gdp-1990.svg", width = 200, height = 150, units = "mm")
+
+#  ggsave("graphs/Synth-u18-gdp-1990.svg", width = 200, height = 150, units = "mm")
 ```
 
-### Weights
+### Weights and balance
 ```{r st_u18_gdp_w}
 # weights kable
 st_u18_gdp$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, Weight = w.weights) %>% 
-  kable()
-st_u18_gdp$tab.v %>% kable()
+  kable(caption = "Country weights")
+
+st_u18_gdp$tab.v %>% kable(caption = "Predictor weights")
+
+st_u18_gdp$tab.pred %>% kable(caption = "Predictor balance between synthetic and treated units")
 ```
 
 ### Placebo testing by country and time
@@ -244,8 +269,8 @@ st_u18_gdp$tab.v %>% kable()
 pb_plot <- gg_gaps(md_u18_gdp, pl_u18_gdp %>% filter(Year>1989)) +
   labs(title = "England vs Synthetic Control, GDP as predictor - country placebo")
 
-ggplotly(pb_plot) #%>% 
-# api_create()
+ggplotly(pb_plot)  # %>% 
+#  api_create(filename = "Plot 45")
 ```
 ```{r pp_u18_gdp}
 
@@ -254,8 +279,8 @@ pp_u18_gdp
 
 ```
 ```{r save_u18_gdp_pb_nat, include=FALSE}
-
-# ggsave(plot = pb_plot, "graphs/Synth-u18-gdp-gaps.svg", width = 200, height = 150, units = "mm")
+#  ggsave(plot = pp_u18_gdp, "graphs/Synth-u18-gdp-pp-ratio.svg", width = 200, height = 150, units = "mm")
+#  ggsave(plot = pb_plot, "graphs/Synth-u18-gdp-gaps.svg", width = 200, height = 150, units = "mm")
 ```
 
 ```{r u18_gdp_pb_time, eval=FALSE, include = FALSE}
@@ -263,7 +288,7 @@ pp_u18_gdp
 super_md_u18_gdp <- tibble()
 
 for (y in 1995:2005){
-    sp <-   purrr::map(sp_u18_gdp_1990, 
+    sp <-   purrr::map(sp_u18_sp_1990, 
     function(x) list(var = 
                        ifelse(min(x$yrs)<y,
                        x[[1]],
@@ -320,7 +345,7 @@ tp_u18_gdp_plotly <- tp_u18_gdp_plotly %>%
   animation_opts(easing = 'sin-in-out')
 
 tp_u18_gdp_plotly
-# api_create(tp_u18_gdp_plotly, filename = "England under-18 - GDP per capita as predictor - placebo time")
+#  api_create(tp_u18_gdp_plotly, filename = "England under-18 - GDP per capita as predictor - placebo time")
 
 ```
 
@@ -346,7 +371,7 @@ synthPrep(synthData_u18 %>% filter(!Country %in% exclude_u18_all_1990),
           "u18_all",
           dependent = "rate",
           predictors = c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"),
-          special.predictors = sp_u18_all_1990,
+          special.predictors = sp_u18_sp_1990,
           time.optimise.ssr = opt_y1:1998,
           time.predictors.prior = opt_y1:1998,
           time.plot = opt_y1:2013)
@@ -358,16 +383,19 @@ gr_u18_all <- gg_synth(md = md_u18_all, post = TRUE)
 
 gr_u18_all + labs(title = sPredText(dp_u18_all))
 
-# ggsave("graphs/Synth-u18-all.svg", width = 200, height = 150, units = "mm")
-ggsave("graphs/Synth-u18-all-1990.svg", width = 200, height = 150, units = "mm")
+
+#  ggsave("graphs/Synth-u18-all-1990.svg", width = 200, height = 150, units = "mm")
 ```
 
-### Weights
+### Weights and balance
 ```{r st_u18_all_w}
 # weights kable
 st_u18_all$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, Weight = w.weights) %>% 
-  kable()
-st_u18_all$tab.v %>% kable()
+  kable(caption = "Country weights")
+
+st_u18_all$tab.v %>% kable(caption = "Predictor weights")
+
+st_u18_all$tab.pred %>% kable(caption = "Predictor balance between synthetic and treated units")
 ```
 
 ### Placebo testing by country and time
@@ -377,8 +405,8 @@ pb_plot <-
 gg_gaps(md_u18_all, pl_u18_all %>% filter(Year>1989)) + 
   labs(title = "England vs Synthetic Control, all predictors - country placebo")
 
-ggplotly(pb_plot) #%>% 
-# api_create()
+ggplotly(pb_plot)  # %>% 
+#  api_create(filename = "Plot 47")
 ```
 ```{r pp_u18_all}
 
@@ -387,7 +415,8 @@ pp_u18_all
 
 ```
 ```{r save_u18_all_pb_nat, include=FALSE}
-# ggsave(plot = pb_plot,"graphs/Synth-u18-all-gaps.svg", width = 200, height = 150, units = "mm")
+#  ggsave(plot = pp_u18_all, "graphs/Synth-u18-all-pp-ratio.svg", width = 200, height = 150, units = "mm")
+#  ggsave(plot = pb_plot,"graphs/Synth-u18-all-gaps.svg", width = 200, height = 150, units = "mm")
 ```
 
 ```{r u18_all_pb_time, eval=FALSE, include = FALSE}
@@ -396,7 +425,7 @@ super_md_u18_all <- tibble()
 
 for (y in 1995:2005){
   
-  sp <-   purrr::map(sp_u18_all_1990, 
+  sp <-   purrr::map(sp_u18_sp_1990, 
     function(x) list(var = 
                        ifelse(min(x$yrs)<y,
                        x[[1]],
@@ -453,7 +482,7 @@ tp_u18_all_plotly <- tp_u18_all_plotly %>%
   animation_opts(easing = 'sin-in-out')
   
   tp_u18_all_plotly
-  # api_create(tp_u18_all_plotly, filename = "England under-18 - all predictors - placebo time")
+  #  api_create(tp_u18_all_plotly, filename = "England under-18 - all predictors - placebo time")
 ```
 
 # Generating Synthetic Control models for all Under-20 comparisons
@@ -476,15 +505,18 @@ gr_u20_sp <- gg_synth(md = md_u20_sp, post = TRUE)
 
 
 gr_u20_sp + labs(title = sPredText(dp_u20_sp))
-# ggsave("graphs/Synth-u20-sp.svg", width = 200, height = 150, units = "mm")
+#  ggsave("graphs/Synth-u20-sp.svg", width = 200, height = 150, units = "mm")
 ```
 
-### Weights
+### Weights and balance
 ```{r st_u20_sp_w}
 # weights kable
 st_u20_sp$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, Weight = w.weights) %>% 
-  kable()
-st_u20_sp$tab.v %>% kable()
+  kable(caption = "Country weights")
+
+st_u20_sp$tab.v %>% kable(caption = "Predictor weights")
+
+st_u20_sp$tab.pred %>% kable(caption = "Predictor balance between synthetic and treated units")
 ```
 
 ### Placebo testing by country and time
@@ -494,8 +526,8 @@ pb_plot <-
 gg_gaps(md_u20_sp, pl_u20_sp) + 
   labs(title = "England vs Synthetic Control, no added predictors - country placebo")
 
-ggplotly(pb_plot)# %>% 
-# api_create()
+ggplotly(pb_plot)  #%>% 
+#  api_create(filename = "Plot 49")
 ```
 ```{r pp_u20_sp}
 
@@ -504,7 +536,8 @@ pp_u20_sp
 
 ```
 ```{r save_u20_sp_pb_nat, include=FALSE}
-# ggsave(plot = pb_plot, "graphs/Synth-u20-sp-gaps.svg", width = 200, height = 150, units = "mm")
+#  ggsave(plot = pp_u20_sp, "graphs/Synth-u20-sp-pp-ratio.svg", width = 200, height = 150, units = "mm")
+#  ggsave(plot = pb_plot, "graphs/Synth-u20-sp-gaps.svg", width = 200, height = 150, units = "mm")
 ```
 
 ```{r u20_sp_pb_time, eval=FALSE, include = FALSE}
@@ -569,7 +602,7 @@ tp_u20_sp_plotly <- tp_u20_sp_plotly %>%
   
   tp_u20_sp_plotly
   
-  # api_create(tp_u20_sp_plotly, filename = "England under-20 - special predictors - placebo time")
+  #  api_create(tp_u20_sp_plotly, filename = "England under-20 - special predictors - placebo time")
 ```
 
 ## Model 5: GDP as predictor
@@ -591,15 +624,18 @@ gr_u20_gdp <- gg_synth(md = md_u20_gdp, post = TRUE)
 
 
 gr_u20_gdp + labs(title = sPredText(dp_u20_gdp))
-# ggsave("graphs/Synth-u20-gdp.svg", width = 200, height = 150, units = "mm")
+#  ggsave("graphs/Synth-u20-gdp.svg", width = 200, height = 150, units = "mm")
 ```
 
-### Weights
+### Weights and balance
 ```{r st_u20_gdp_w}
 # weights kable
 st_u20_gdp$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, Weight = w.weights) %>% 
-  kable()
-st_u20_gdp$tab.v %>% kable()
+  kable(caption = "Country weights")
+
+st_u20_gdp$tab.v %>% kable(caption = "Predictor weights")
+
+st_u20_gdp$tab.pred %>% kable(caption = "Predictor balance between synthetic and treated units")
 ```
 
 ### Placebo testing by country and time
@@ -609,8 +645,8 @@ pb_plot <-
 gg_gaps(md_u20_gdp, pl_u20_gdp) +
   labs(title = "England vs Synthetic Control, GDP as predictor - country placebo")
 
-ggplotly(pb_plot) #%>% 
-# api_create()
+ggplotly(pb_plot)  # %>% 
+#  api_create(filename = "Plot 51")
 ```
 ```{r pp_u20_gdp}
 
@@ -619,7 +655,8 @@ pp_u20_gdp
 
 ```
 ```{r save_u20_gdp_pb_nat, include=FALSE}
-# ggsave(plot = pb_plot, "graphs/Synth-u20-gdp-gaps.svg", width = 200, height = 150, units = "mm")
+#  ggsave(plot = pp_u20_gdp, "graphs/Synth-u20-gdp-pp-ratio.svg", width = 200, height = 150, units = "mm")
+#  ggsave(plot = pb_plot, "graphs/Synth-u20-gdp-gaps.svg", width = 200, height = 150, units = "mm")
 ```
 
 ```{r u20_gdp_pb_time, eval=FALSE, include = FALSE}
@@ -685,7 +722,7 @@ tp_u20_gdp_plotly <- tp_u20_gdp_plotly %>%
   animation_opts(easing = 'sin-in-out')
   
   tp_u20_gdp_plotly
-  # api_create(tp_u20_gdp_plotly, filename = "England under-20 - GDP per capita as predictor - placebo time")
+  #  api_create(tp_u20_gdp_plotly, filename = "England under-20 - GDP per capita as predictor - placebo time")
 ```
 
 ## Model 6: All predictors
@@ -708,15 +745,18 @@ gr_u20_all <- gg_synth(md = md_u20_all, post = TRUE)
 
 gr_u20_all + labs(title = sPredText(dp_u20_all))
 
-# ggsave("graphs/Synth-u20-all.svg", width = 200, height = 150, units = "mm")
+#  ggsave("graphs/Synth-u20-all.svg", width = 200, height = 150, units = "mm")
 ```
 
-### Weights
+### Weights and balance
 ```{r st_u20_all_w}
 # weights kable
 st_u20_all$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, Weight = w.weights) %>% 
-  kable()
-st_u20_all$tab.v %>% kable()
+  kable(caption = "Country weights")
+
+st_u20_all$tab.v %>% kable(caption = "Predictor weights")
+
+st_u20_all$tab.pred %>% kable(caption = "Predictor balance between synthetic and treated units")
 ```
 
 ### Placebo testing by country and time
@@ -726,8 +766,8 @@ pb_plot <-
 gg_gaps(md_u20_all, pl_u20_all) + 
   labs(title = "England vs Synthetic Control, all predictors - country placebo")
 
-ggplotly(pb_plot) #%>% 
-# api_create()
+ggplotly(pb_plot)  # %>% 
+#  api_create(filename = "Plot 53")
 ```
 ```{r pp_u20_all}
 
@@ -736,7 +776,8 @@ pp_u20_all
 
 ```
 ```{r save_u20_all_pb_nat, include=FALSE}
-# ggsave(plot = pb_plot, "graphs/Synth-u20-all-gaps.svg", width = 200, height = 150, units = "mm")
+#  ggsave(plot = pp_u20_all, "graphs/Synth-u20-all-pp-ratio.svg", width = 200, height = 150, units = "mm")
+#  ggsave(plot = pb_plot, "graphs/Synth-u20-all-gaps.svg", width = 200, height = 150, units = "mm")
 ```
 
 ```{r u20_all_pb_time, eval=FALSE, include = FALSE}
@@ -801,5 +842,5 @@ tp_u20_all_plotly <- tp_u20_all_plotly %>%
   animation_opts(easing = 'sin-in-out')
   
   tp_u20_all_plotly
-  # api_create(tp_u20_all_plotly, filename = "England under-20 - all predictors - placebo time")
+  #  api_create(tp_u20_all_plotly, filename = "England under-20 - all predictors - placebo time")
 ```
