@@ -594,14 +594,14 @@ plotIterations <- function(iteration = it_u18_rateSp, labels = FALSE) {
   
   weight_labels <- iteration %>% 
     select(iteration, w_weights, mspe) %>% 
-    unnest() %>% 
+    unnest(cols = w_weights) %>% 
     group_by(iteration) %>% 
     top_n(1,w.weights) %>% 
     ungroup() %>% 
     group_by(unit.names) %>% 
     top_n(1, -mspe) %>% 
     mutate(weight = paste0(w.weights*100, "%"),
-           label = paste0(unit.names, ", ", weight, ", ", "MSPE = ", round(mspe, 3)))
+           label = paste0(unit.names, "\n", weight, ", ", "MSPE = ", round(mspe, 3)))
   
   label_pos <- iteration %>%
     select(gaps) %>%
@@ -625,8 +625,18 @@ plotIterations <- function(iteration = it_u18_rateSp, labels = FALSE) {
     coord_cartesian(clip = "off")
   
   if(labels) {
+    ggp <- ggplot_build(mspes)
+    
+    ytop <- ggp[["data"]][[1]] %>% 
+      group_by(x) %>% 
+      summarise(count = sum(count)) %>% 
+      ungroup() %>% 
+      summarise(max = max(count)) %>% 
+      pull()*2/3
+    
+    
     mspes <- mspes +
-      geom_text(data = label_pos, aes(x = mspe, y = 40, label = label),
+      geom_text(data = label_pos, aes(x = mspe, y = ytop, label = label),
                 hjust = 0,
                 angle = 45,
                 inherit.aes = FALSE) +
@@ -641,7 +651,6 @@ plotIterations <- function(iteration = it_u18_rateSp, labels = FALSE) {
     mutate(groups = as.factor(groups)) %>% 
     filter(Year<1999) %>% 
     ggplot(aes(Year, Gap, col = groups, group = iteration)) + 
-    geom_line(size = 1, alpha = 0.2) +
     geom_segment(x = min(iteration$gaps[[1]]$Year), xend = 1999, y = 0, yend = 0, col = "black") + 
     theme_minimal()+
     theme(panel.grid = element_blank())+
@@ -650,6 +659,7 @@ plotIterations <- function(iteration = it_u18_rateSp, labels = FALSE) {
   
   if(labels){
     gaps <- gaps +
+    geom_line(size = 1, alpha = 0.2) +
     geom_line(data = label_pos, alpha = 1, size = 2) +
       geom_text_repel(data = label_pos %>% filter(Year == 1998), aes(x = 1998, y = Gap, label = unit.names),
                       hjust = 0,
@@ -660,6 +670,9 @@ plotIterations <- function(iteration = it_u18_rateSp, labels = FALSE) {
                       na.rm = TRUE) +
       theme(plot.margin = unit(c(0,4,0,0), "cm")) +
       coord_cartesian(clip = 'off')
+  } else {
+    gaps <- gaps +
+      geom_line(size = 1, alpha = 0.8)
   }
   
   ggarrange(mspes, gaps, ncol = 2, common.legend = TRUE, legend = "bottom")
@@ -704,11 +717,20 @@ p <-  md %>%
 
 
 # iterating through removal of top-weighted countries --------------------------------------------------------
-gg_iterateCountries <- function(itco) {
+gg_iterateCountries <- function(itco, jitter = FALSE, n = 10) {
   
 require(purrr)
 
-  
+if(jitter){
+  height <- itco %>%
+    reduce(bind_rows) %>% 
+    top_n(n, -mspe) %>% 
+    summarise(h = max(mspe)) %>% 
+    pull()/50
+} else {
+  height <- 0
+}
+    
 order_co <- 
   itco %>% map( ~ select(.x, label)) %>% 
   reduce(bind_rows) %>% 
@@ -716,12 +738,13 @@ order_co <-
 
 itco %>% 
   reduce(bind_rows) %>% 
-  filter(mspe<5*min(mspe)) %>% 
+  top_n(n, -mspe) %>%
+  # filter(mspe<5*min(mspe)) %>%
   select(mspe, unit.names, label, gaps) %>% 
   unnest(gaps) %>% 
   mutate(label = factor(label, levels = order_co)) %>% 
   ggplot(aes(Year, Gap)) + 
-  geom_line(size = 1, aes(col = label)) + 
+  geom_line(size = 1, aes(col = label), position = position_jitter(h=height, w = 0)) + 
   theme_minimal() +
   theme(panel.grid = element_blank()) +
   geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +

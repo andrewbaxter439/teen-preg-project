@@ -208,7 +208,7 @@ u_20_ccodes <- synthData_u20 %>%
 
 # New data - same years and countries, filtering --------------------------
 
-new_exclude <- c("Hungary", "Estonia", "Lithuania", "Poland", "Czechia", "Slovenia", "Austria", "Northern Ireland")
+new_exclude <- c("Hungary", "Estonia", "Lithuania", "Poland", "Czechia", "Slovenia", "Austria", "Northern Ireland", "New Zealand")
 
 synthData_u18_filt <- synthData_u18 %>% 
   filter(!(Country %in% new_exclude), Year > 1989)

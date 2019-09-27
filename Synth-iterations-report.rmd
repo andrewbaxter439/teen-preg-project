@@ -15,9 +15,9 @@ library(ggplot2)
 library(SPHSUgraphs)
 library(purrr)
 library(ggrepel)
-load('Data/synth_data.rdata') # outputted from 'Synth_data.R'
-load("Data/iterations.rdata")
-load("Data/iterating_rm_countries.rdata")
+load('Data/synth_data_b.rdata') # outputted from 'Synth_data.R'
+load("Data/filtered_itsp.rdata")  # outputted from 'Synth_create_sps.R'
+load("Data/iterating_rm_countries_filt.rdata")
 source('R/Synth_functions.R')
 `-.gg` <- function(e1, e2) e2(e1)
 ```
@@ -28,8 +28,8 @@ source('R/Synth_functions.R')
 Plotting MSPEs by iteration and gaps for all iterations.
 
 ```{r it_u18_plots}
-gr_it_u18_sp <- plotIterations(it_u18_rateSp)  %>% annotate_figure(top = text_grob("Under-18, no predictors - year iterations"))
-gr_it_u18_sp
+gr_it_u18_filt <- plotIterations(it_u18_filt)  %>% annotate_figure(top = text_grob("Under-18, no predictors - year iterations"))
+gr_it_u18_filt
 ```
 
 ## Top countries
@@ -37,8 +37,8 @@ gr_it_u18_sp
 Differing iterations produced different country weightings. I exctracted the top country for each iteration and plotted the lowest MSPE for the top four countries:
 
 ```{r it_u18_tops}
-gr_it_u18_sp <- plotIterations(it_u18_rateSp, labels = TRUE)  %>% annotate_figure(top = text_grob("Under-18, no predictors - year iterations"))
-gr_it_u18_sp
+gr_tops_u18_filt <- plotIterations(it_u18_filt, labels = TRUE)  %>% annotate_figure(top = text_grob("Under-18, no predictors - year iterations"))
+gr_tops_u18_filt
 ```
 
 ## Removing top countries
@@ -46,65 +46,27 @@ gr_it_u18_sp
 A further iterative cycle constructed sequential synthetic controls, removing the previous top-weighted country to test for over-reliance on very few abnormal countries:
 
 ```{r itco_u18_sp}
-order_co <- 
-  itco_u18_sp %>% map( ~ select(.x, label)) %>% 
-    reduce(bind_rows) %>% 
-    pull()
-
-itco_u18_sp %>% 
-  reduce(bind_rows) %>% 
-  filter(mspe<5*min(mspe)) %>% 
-  select(mspe, unit.names, label, gaps) %>% 
-  unnest(gaps) %>% 
-  mutate(label = factor(label, levels = order_co)) %>% 
-  ggplot(aes(Year, Gap)) + 
-  geom_line(size = 1, alpha = 0.8, aes(col = label)) + 
-  theme_minimal() +
-  theme(panel.grid = element_blank()) +
-  geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +
-  geom_segment(x = 1985, xend = 2013, y = 0, yend = 0, col = "black") +
-  scale_colour_sphsu(name = "Top weighted country")
-
-```
-
-# Under-18 - from 1990-2013 - no predictors
-
-```{r it_u18_1990_plots}
-gr_it_u18_1990 <- plotIterations(it_u18_sp_1990) %>% annotate_figure(top = text_grob("Under-18, no predictors - year iterations"))
-gr_it_u18_1990
-
-```
-
-## Top Countries
-
-```{r it_u18_1990_tops}
-gr_it_u18_1990 <- plotIterations(it_u18_sp_1990, labels = TRUE)
-gr_it_u18_1990
-
-```
-
-## Removing Top Countries
-```{r itco_u18_1990}
-gg_iterateCountries(itco_u18_sp_1990)
-
+gr_itco_u18_filt <- gg_iterateCountries(itco_u18_filt)
+gr_itco_u18_filt
 ```
 
 # Under-20 - no added predictors
 
 ```{r it_u20_plots}
-gr_it_u20_sp <- plotIterations(it_u20_sp)  %>% annotate_figure(top = text_grob("Under-20, no predictors - year iterations"))
-gr_it_u20_sp
+gr_it_u20_filt <- plotIterations(it_u20_filt)  %>% annotate_figure(top = text_grob("Under-20, no predictors - year iterations"))
+gr_it_u20_filt
 ```
 
 ## Top Countries
 
 ```{r it_u20_tops}
-gr_it_u20_sp <- plotIterations(it_u20_sp, labels = TRUE)  %>% annotate_figure(top = text_grob("Under-20, no predictors - year iterations"))
-gr_it_u20_sp
+gr_tops_u20_filt <- plotIterations(it_u20_filt, labels = TRUE)  %>% annotate_figure(top = text_grob("Under-20, no predictors - year iterations"))
+gr_tops_u20_filt
 ```
 
 ## Removing Top Countries
 
-```{r itco_u20_sp}
-gg_iterateCountries(itco_u20_sp)
+```{r itco_u20_filt}
+gr_itco_u20_filt <- gg_iterateCountries(itco_u20_filt)
+gr_itco_u20_filt
 ```
