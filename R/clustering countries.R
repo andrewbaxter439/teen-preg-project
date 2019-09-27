@@ -3,6 +3,7 @@ library(ggplot2)
 library(SPHSUgraphs)
 load("Data/synth_data.rdata")
 library(ggrepel)
+library(tidyr)
 
 # Under-18 birth rates ---------------------------------------------------------------------------------------
 
@@ -39,6 +40,7 @@ df %>%
   ggplot(aes(GDPperCap, rate, col = factor(cluster))) +
   geom_text_repel(aes(label = Country), size = 8) +
   theme_sphsu_light() +
+  scale_colour_sphsu() +
   theme(panel.grid = element_blank(),
         panel.background = element_blank(),
         legend.position = "none")
@@ -48,6 +50,17 @@ df %>%
 
 hclust.out <- hclust(dist(matrix_df))
 plot(hclust.out)
+
+df %>% 
+  mutate(cluster = kmeans(scale(df[,2:3]), 4)$cluster,
+         cluster2 = factor(cutree(hclust.out, k = 4))) %>% 
+  ggplot(aes(GDPperCap, rate, col = cluster2)) +
+  geom_text_repel(aes(label = Country), size = 8) +
+  theme_sphsu_light() +
+  scale_colour_sphsu() +
+  theme(panel.grid = element_blank(),
+        panel.background = element_blank(),
+        legend.position = "none")
 
 # Under 20 pregnancy rates  ----------------------------------------------------------------------------------
 
@@ -78,11 +91,11 @@ tibble(clusters = 1:15, wss = mt1_ks) %>%
 
 
 df1 %>% 
-  mutate(cluster1 = factor(kmeans(scale(as.matrix(df1[,2:3])), 4)$cluster),
-         cluster2 = factor(cutree(hclust.out1, k = 4))) %>% 
-  ggplot(aes(GDPperCap, pRate, col = cluster2, label = Country)) +
+  mutate(cluster1 = factor(kmeans(scale(as.matrix(df1[,2:3])), 4)$cluster)) %>% 
+  ggplot(aes(GDPperCap, pRate, col = cluster1, label = Country)) +
   geom_text_repel(aes(label = Country), size = 8) +
   theme_sphsu_light() +
+  scale_colour_sphsu() +
   theme(panel.grid = element_blank(),
         panel.background = element_blank(),
         legend.position = "none")
@@ -91,9 +104,19 @@ df1 %>%
 # ** Hierarchical clustering ---------------------------------------------------------------------------------
 
 
-hclust.out1 <- hclust(dist(mt1))
 plot(hclust.out1)
+hclust.out1 <- hclust(dist(mt1))
 
+df1 %>% 
+  mutate(cluster1 = factor(kmeans(scale(as.matrix(df1[,2:3])), 4)$cluster),
+         cluster2 = factor(cutree(hclust.out1, k = 4))) %>% 
+  ggplot(aes(GDPperCap, pRate, col = cluster2, label = Country)) +
+  geom_text_repel(aes(label = Country), size = 8) +
+  theme_sphsu_light() +
+  scale_colour_sphsu() +
+  theme(panel.grid = element_blank(),
+        panel.background = element_blank(),
+        legend.position = "none")
 
 
 # Clustering by all predictors -------------------------------------------------------------------------------
@@ -101,7 +124,7 @@ plot(hclust.out1)
 
 # Under-18 ---------------------------------------------------------------------------------------------------
 
-synthData_u18 %>% 
+All_predictors <- synthData_u18 %>% 
   filter(Year<1999) %>% 
   mutate(period = ifelse(Year<1988, 1,
                                 ifelse(Year<1990, 2,
@@ -110,4 +133,38 @@ synthData_u18 %>%
   mutate_at(vars(5:8), mean) %>% 
   group_by(Country, period) %>% 
   summarise_all(mean) %>% 
-  filter_all(!anyNA(.))
+  filter_all(~ !anyNA(.x)) %>% 
+  select(-Year) %>% 
+  mutate(period = paste0("period.", period)) %>% 
+  spread(period, rate) %>% 
+  select(-Code)
+
+mt_all <- All_predictors[,-1] %>% as.matrix() %>% scale()
+
+row.names(mt_all) <- All_predictors$Country
+
+mt_all_ks <- c()
+
+for(i in 1:14) {
+  mt_all_ks[i] <- kmeans(mt_all, i)$tot.withinss
+}
+
+tibble(clusters = 1:14, wss = mt_all_ks) %>% 
+  ggplot(aes(clusters, wss)) +
+  geom_point()+
+  geom_line()
+
+All_predictors %>% 
+  ungroup() %>% 
+  mutate(cluster = factor(kmeans(mt_all, 6)$cluster)) %>% 
+  ggplot(aes(GDPperCap, period.4, col = cluster)) + 
+  geom_text_repel(aes(label = Country), size = 8) +
+  theme_sphsu_light() +
+  scale_colour_sphsu() +
+  theme(panel.grid = element_blank(),
+        panel.background = element_blank(),
+        legend.position = "none")
+
+u_18_ccodes
+
+new_exclude <- c("Hungary", "Estonia", "Lithuania", "Poland", "Czechia", "Slovenia")

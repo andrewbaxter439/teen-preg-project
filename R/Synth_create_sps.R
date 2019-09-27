@@ -26,6 +26,17 @@ it_u18_sp_1990 <- testSynthIterations(
 ) %>%
   arrange(groups, mspe)
 
+it_u18_filt <- testSynthIterations(
+  yrs = 1990:1998,
+  pred = "rate",
+  data = synthData_u18_filt[,1:4],
+  ccodes = u_18_ccodes_f,
+  n = 4,
+  predictors = NULL,
+  time.optimise = 1990:1998
+) %>%
+  arrange(groups, mspe)
+
 
 it_u18_gdp <- testSynthIterations(
   yrs = 1985:1998,
@@ -76,6 +87,15 @@ it_u20_sp <-  testSynthIterations(
   pred = "pRate",
   data = synthData_u20[,1:4],
   ccodes = u_20_ccodes,
+  n = 4,
+  time.optimise = 1990:1998
+) %>% arrange(groups, mspe)
+
+it_u20_filt <-  testSynthIterations(
+  yrs = 1990:1998,
+  pred = "pRate",
+  data = synthData_u20_filt[,1:4],
+  ccodes = u_20_ccodes_f,
   n = 4,
   time.optimise = 1990:1998
 ) %>% arrange(groups, mspe)
@@ -167,6 +187,25 @@ save(
   file = "Data/special_preds.rdata"
 )
 
+it_u18_filt %>% 
+  group_by(groups) %>% 
+  top_n(3, -mspe)
+
+it_u20_filt %>% 
+  group_by(groups) %>% 
+  top_n(3, -mspe)
+
+sp_u18_filt <- it_u18_filt$sPred[it_u18_filt$iteration == 26][[1]]
+sp_u20_filt <- it_u20_filt$sPred[it_u20_filt$iteration == 69][[1]]
+
+save(
+  it_u18_filt,
+  it_u20_filt,
+  sp_u18_filt,
+  sp_u20_filt,
+  file = "Data/filtered_itsp.rdata"
+)
+
 #  Country placebo data --------------------------------------------------------------------------------------
 
 #u18_gdp and u18_all now use 1990 as starting year and sps derived from no-predictor data
@@ -189,8 +228,14 @@ pl_u20_all,
 file = "Data/placebos_country.rdata"
 )
 
+pl_u18_filt  <- generatePlacebos(synthData_u18_filt[, 1:4], special.predictors = sp_u18_filt, time.optimize.ssr = 1990:1998, time.plot = 1990:2013,)
+pl_u20_filt  <- generatePlacebos(synthData_u20_filt[, 1:4], special.predictors = sp_u20_filt, time.optimize.ssr = 1990:1998, time.plot = 1990:2013, dependent = "pRate")
 
-
+save(
+  pl_u18_filt,
+  pl_u20_filt,
+  file = "Data/placebo_country_b.rdata"
+)
 # Iterate through removing countries --------------------------------------
 
 
@@ -246,3 +291,9 @@ itco_u20_sp <- iterateCountries(data = synthData_u20[,1:4], ccodes = u_20_ccodes
                                 Margin.ipop=.005,Sigf.ipop=7,Bound.ipop=6)
 
 save(itco_u18_sp, itco_u18_sp_1990, itco_u20_sp, file = "Data/iterating_rm_countries.rdata")
+
+
+# filtered iterating countries --------------------------------------------
+
+itco_u18_filt <- iterateCountries(synthData_u18_filt, u_18_ccodes_f, start = 1990, pred = "rate")
+itco_u20_filt <- iterateCountries(synthData_u20_filt, u_20_ccodes_f, start = 1990, pred = "pRate")

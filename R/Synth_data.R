@@ -206,6 +206,26 @@ u_20_ccodes <- synthData_u20 %>%
   unique()
 
 
+# New data - same years and countries, filtering --------------------------
+
+new_exclude <- c("Hungary", "Estonia", "Lithuania", "Poland", "Czechia", "Slovenia", "Austria", "Northern Ireland")
+
+synthData_u18_filt <- synthData_u18 %>% 
+  filter(!(Country %in% new_exclude), Year > 1989)
+
+synthData_u20_filt <- synthData_u20 %>% 
+  filter(!(Country %in% new_exclude))
+
+u_18_ccodes_f <- synthData_u18_filt%>% 
+  select(Country, Code) %>% 
+  unique()
+
+u_20_ccodes_f <- synthData_u20_filt %>% 
+  select(Country, Code) %>% 
+  unique()
+
+save(synthData_u18_filt, synthData_u20_filt, u_18_ccodes_f, u_20_ccodes_f, file = "Data/synth_data_b.rdata")
+
 # exclusion lists --------------------------------------------------------------------------------------------
 
 
@@ -257,6 +277,7 @@ save(
   exclude_u20_gdp,
   exclude_u20_all,
   synthData_u18,
+  synthData,
   synthData_u20,
   u_18_ccodes,
   u_20_ccodes,

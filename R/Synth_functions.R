@@ -124,7 +124,10 @@ generatePlacebos <- function(data,
                              time.plot = 1985:2013, 
                              dependent = "rate", 
                              ...) {
-
+require(dplyr)
+  require(Synth)
+  require(tidyr)
+  
   data <- data.frame(data %>% 
                        filter(Country != "England and Wales"))
   

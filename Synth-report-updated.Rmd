@@ -1,0 +1,268 @@
+---
+title: "Synth reporting"
+author: "Andrew Baxter"
+date: "10/09/2019"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    toc_float: 
+      collapsed: false
+  # word_document:
+  #   fig_height: 6
+  #   fig_width: 8
+  #   reference_docx: report_template.docx
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      message = FALSE, 
+                      warning = FALSE,
+                      error = FALSE,
+                      fig.width = 6,
+                      fig.height = 5,
+                      dpi = 150,
+                      out.width = "100%")
+library(readxl)
+library(tidyverse)
+library(stringr)
+library(broom)
+library(magrittr)
+library(Synth)
+library(Rcpp)
+library(purrr)
+library(svglite)
+library(SPHSUgraphs)
+library(plotly)
+library(knitr)
+`-.gg` <- function(e1, e2) e2(e1)
+```
+```{r load_functions, include=FALSE}
+load('Data/synth_data_b.rdata') # outputted from 'Synth_data.R'
+load("Data/filtered_itsp.rdata")  # outputted from 'Synth_create_sps.R'
+load("Data/placebo_country_b.rdata")  # outputted from 'Synth_create_sps.R'
+load("Data/time_placebos_b.rdata")  # outputted from 'Synth_time_pbs.R'
+source('R/Synth_functions.R')
+```
+```{r results='asis'}
+cat("
+<style>
+caption {
+      color: black;
+      font-weight: bold;
+      font-size: 1.0em;
+    }
+</style>
+")
+
+```
+
+# Setting up data
+
+Data from Human Mortality Database and Human Fertility Database was used to calculate birth rates. This was tidied to give Under-18 rates:
+
+```{r tidy_u18}
+kable(head(synthData_u18_filt %>% mutate_if(is.numeric, ~ round(.,2))))
+```
+
+Abortion estimates were added to give Under-20 rates:
+
+```{r tidy_u_19}
+kable(head(synthData_u20_filt %>% mutate_if(is.numeric, ~ round(.,2))))
+```
+
+## Removing non-fitting countries
+
+Several countries were removed (detail added later).
+
+# Iterating through year combinations
+
+For each comparison, I iterated through all combinations of years as special predictors to minimise MSPE (whilst prioritising fewest groupings). For example, for the under-18 basic model with years as special predictors:
+
+```{r example_iterations, eval = FALSE, echo = TRUE}
+it_u18_sp <- testSynthIterations(
+  yrs = 1990:1998,
+  pred = "rate",
+  data = synthData_u18[,1:4],
+  ccodes = u_18_ccodes,
+  n = 4,
+  predictors = NULL,
+  time.optimise = 1985:1998
+) %>%
+  arrange(groups, mspe)
+```
+
+# Generating Synthetic Control models for all Under-18 comparisons
+
+## Model 1: Rate only as predictor
+
+### England vs Synthetic Control
+```{r md_u18_sp, include = FALSE}
+opt_y1 <- 1990
+synthPrep(synthData_u18_filt[,1:4],
+          grp = "u18_sp",
+          dependent = "rate",
+          special.predictors = sp_u18_filt,
+          time.optimise.ssr = opt_y1:1998,
+          time.predictors.prior = opt_y1:1998,
+          time.plot = opt_y1:2013
+          )
+```
+
+```{r md_u18_sp_graph}
+gr_u18_sp <- gg_synth(md = md_u18_sp, post = TRUE) 
+
+
+gr_u18_sp + labs(title = sPredText(dp_u18_sp))
+
+#  ggsave("graphs/Synth-u18-sp.svg", width = 200, height = 150, units = "mm")
+
+```
+
+### Weights and balance
+
+```{r st_u18_sp_w}
+st_u18_sp$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, Weight = w.weights) %>% 
+  kable(caption = "Country weights")
+
+st_u18_sp$tab.v %>% kable(caption = "Predictor weights")
+
+st_u18_sp$tab.pred %>% kable(caption = "Predictor balance between synthetic and treated units")
+```
+
+
+### Placebo testing by country and time
+
+```{r plot_u18_pb_nat}
+pb_plot <- 
+  gg_gaps(md_u18_sp, pl_u18_filt) + 
+  # theme(text = element_text(size = 12),
+  #       title = element_text(size = 12)) +
+  labs(title = "England vs Synthetic Control, no added predictors - country placebo")
+
+ggplotly(pb_plot)  # %>% 
+#  api_create(filename = "Plot 43")
+```
+```{r pp_u18_sp}
+
+pp_u18_sp <- gg_pre_postMSPE(md_u18_sp, pl_u18_filt) + labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u18_sp
+
+```
+
+```{r save_u18_pb_nat, include=FALSE}
+#  ggsave(plot = pp_u18_sp, "graphs/Synth-u18-sp-pp-ratio.svg", width = 200, height = 150, units = "mm")
+#  ggsave(plot = pb_plot, "graphs/Synth-u18-sp-gaps.svg", width = 200, height = 150, units = "mm")
+```
+
+```{r u18_pb_time_graph}
+tb_u18_sp <- super_md_u18_filt %>% 
+  ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
+  geom_segment(aes(x = IntYr-0.5, xend = IntYr-0.5, y = 0, yend = 20), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
+  geom_line(size = 1.5) +
+  theme_sphsu_light() +
+  ylab(paste0("Under-18 birth rate (per 1,000 women)")) +
+  theme(legend.title = element_blank(),
+        panel.grid = element_blank(),
+        line = element_blank()) +
+  scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +
+  scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
+  labs(title = "England vs Synthetic Control, no added predictors - time placebo") +
+  scale_y_continuous(limits = c(0, 20))
+
+# tb_u18_sp + facet_wrap(super_md_u18_sp$IntYr, ncol = 3)
+
+tp_u18_sp_plotly <- ggplotly(tb_u18_sp) %>% 
+  animation_slider(currentvalue = list(prefix = "Year ", font = list(color="black"))) %>% 
+  animation_opts(easing = 'sin-in-out')
+
+tp_u18_sp_plotly
+#  api_create(tp_u18_sp_plotly, filename = "England under-18 - special predictors - placebo time")
+
+```
+
+# Generating Synthetic Control models for all Under-20 comparisons
+
+## Model 2: England vs Synthetic Control
+
+### England vs Synthetic Control
+```{r u20_sp, include = FALSE}
+opt_y1 <- 1990
+# dataprep and synth
+synthPrep(synthData_u20_filt[,1:4],
+          "u20_sp",
+          dependent = "pRate",
+          special.predictors = sp_u20_filt,
+          time.optimise.ssr = opt_y1:1998,
+          time.predictors.prior = opt_y1:1998,
+          time.plot = opt_y1:2013
+          )
+```
+```{r md_u20_sp_graph}
+# graph
+gr_u20_sp <- gg_synth(md = md_u20_sp, post = TRUE) 
+
+
+gr_u20_sp + labs(title = sPredText(dp_u20_sp))
+#  ggsave("graphs/Synth-u20-sp.svg", width = 200, height = 150, units = "mm")
+```
+
+### Weights and balance
+```{r st_u20_sp_w}
+# weights kable
+st_u20_sp$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, Weight = w.weights) %>% 
+  kable(caption = "Country weights")
+
+st_u20_sp$tab.v %>% kable(caption = "Predictor weights")
+
+st_u20_sp$tab.pred %>% kable(caption = "Predictor balance between synthetic and treated units")
+```
+
+### Placebo testing by country and time
+```{r plot_u20_sp_pb_nat}
+# gaps graph
+pb_plot <- 
+gg_gaps(md_u20_sp, pl_u20_filt) + 
+  labs(title = "England vs Synthetic Control, no added predictors - country placebo")
+
+ggplotly(pb_plot)  #%>% 
+#  api_create(filename = "Plot 49")
+```
+```{r pp_u20_sp}
+
+pp_u20_sp <- gg_pre_postMSPE(md_u20_sp, pl_u20_filt) + labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u20_sp
+
+```
+```{r save_u20_sp_pb_nat, include=FALSE}
+#  ggsave(plot = pp_u20_sp, "graphs/Synth-u20-sp-pp-ratio.svg", width = 200, height = 150, units = "mm")
+#  ggsave(plot = pb_plot, "graphs/Synth-u20-sp-gaps.svg", width = 200, height = 150, units = "mm")
+```
+
+
+```{r u20_sp_pb_time_graph}
+# placebo graph
+tp_u20_sp_plotly <- super_md_u20_filt %>% 
+  ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
+  geom_segment(aes(x = IntYr-0.5, xend = IntYr-0.5, y = 0, yend = 80), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
+  geom_line(size = 1.5) +
+  theme_sphsu_light() +
+  ylab(paste0("Under-20 pregnancy rate (per 1,000 women)")) +
+  theme(legend.title = element_blank(),
+        panel.grid = element_blank(),
+        line = element_blank()) +
+  scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +
+  scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
+    labs(title = "England vs Synthetic Control, no added predictors - time placebo") +
+  scale_y_continuous(limits = c(0, 80)) - ggplotly
+
+tp_u20_sp_plotly <- tp_u20_sp_plotly %>% 
+  animation_slider(currentvalue = list(prefix = "Year ", font = list(color="black"))) %>% 
+  animation_opts(easing = 'sin-in-out')
+  
+  tp_u20_sp_plotly
+  
+  #  api_create(tp_u20_sp_plotly, filename = "England under-20 - special predictors - placebo time")
+```
