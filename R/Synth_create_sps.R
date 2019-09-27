@@ -297,3 +297,9 @@ save(itco_u18_sp, itco_u18_sp_1990, itco_u20_sp, file = "Data/iterating_rm_count
 
 itco_u18_filt <- iterateCountries(synthData_u18_filt, u_18_ccodes_f, start = 1990, pred = "rate")
 itco_u20_filt <- iterateCountries(synthData_u20_filt, u_20_ccodes_f, start = 1990, pred = "pRate")
+
+save(
+  itco_u18_filt,
+  itco_u20_filt,
+  file = "Data/iterating_rm_countries_filt.rdata"
+)
