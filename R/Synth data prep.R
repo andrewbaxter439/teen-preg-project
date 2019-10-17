@@ -87,6 +87,22 @@ GDP_all %>%
   mutate(Year = as.numeric(Year)) -> GDP_cap
 
 
+# Predictor 3 - spending on education ------------------------------------------------
+
+edu_all <- read_csv("Downloaded data files/education_spending.csv", skip = 3)
+edu_all[edu_all$"Country Code" == "USA",]$`Country Name` <- "United States of America"
+
+edu_pred <- edu_all %>% filter(`Country Name` %in% c(u_18_ccodes_f$Country, "United Kingdom")) %>% 
+  select(Country = `Country Name`, `1990`:`2013`) %>% 
+  gather("Year", "edu_spend", -1) %>% 
+  mutate(yrgrp = ifelse(Year<1996, 1, ifelse(Year<1999, 2, 3))) %>% 
+  group_by(yrgrp, Country) %>% 
+  mutate(edu_spend_mean = mean(edu_spend, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  mutate(Country = ifelse(Country=="United Kingdom", "England and Wales", Country),
+         Year = as.numeric(Year)) %>% 
+  select(Country, Year, edu_spend_mean)
+
 # Predictor #2 - m:f ratio of each age group -----------------------------------------------------------------
 
 popAgeGrps <- tibble(Age=factor(c(13:15, 15:17, 15:19)),

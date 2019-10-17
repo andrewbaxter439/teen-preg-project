@@ -2,7 +2,13 @@
 title: "Model-testing iterations"
 author: "Andrew Baxter"
 date: "19/09/2019"
-output: html_document
+output:
+  # html_document
+  word_document:
+    fig_height: 6
+    fig_width: 8
+    reference_docx: report_template.docx
+always_allow_html: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -46,7 +52,7 @@ gr_tops_u18_filt
 A further iterative cycle constructed sequential synthetic controls, removing the previous top-weighted country to test for over-reliance on very few abnormal countries:
 
 ```{r itco_u18_sp}
-gr_itco_u18_filt <- gg_iterateCountries(itco_u18_filt)
+gr_itco_u18_filt <- gg_iterateCountries(itco_u18_filt, float_labs = TRUE)
 gr_itco_u18_filt
 ```
 
@@ -67,6 +73,6 @@ gr_tops_u20_filt
 ## Removing Top Countries
 
 ```{r itco_u20_filt}
-gr_itco_u20_filt <- gg_iterateCountries(itco_u20_filt)
+gr_itco_u20_filt <- gg_iterateCountries(itco_u20_filt, float_labs = TRUE)
 gr_itco_u20_filt
 ```

@@ -1,0 +1,141 @@
+---
+title: "Adding other predictors"
+author: "Andrew Baxter"
+date: "14/10/2019"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      message = FALSE, 
+                      warning = FALSE,
+                      error = FALSE,
+                      fig.width = 6,
+                      fig.height = 5,
+                      dpi = 150,
+                      out.width = "100%")
+library(readxl)
+library(tidyverse)
+library(stringr)
+library(broom)
+library(magrittr)
+library(Synth)
+library(Rcpp)
+library(purrr)
+library(svglite)
+library(SPHSUgraphs)
+library(plotly)
+library(knitr)
+`-.gg` <- function(e1, e2) e2(e1)
+load('Data/synth_data.rdata') # outputted from 'Synth_data.R'
+load('Data/synth_data_b.rdata') # outputted from 'Synth_data.R'
+load("Data/filtered_itsp.rdata")  # outputted from 'Synth_create_sps.R'
+load("Data/placebo_country_b.rdata")  # outputted from 'Synth_create_sps.R'
+load("Data/time_placebos_b.rdata")  # outputted from 'Synth_time_pbs.R'
+source('R/Synth_functions.R')
+```
+```{r results='asis'}
+cat("
+<style>
+caption {
+      color: black;
+      font-weight: bold;
+      font-size: 1.0em;
+    }
+</style>
+")
+
+```
+
+
+# Adding other predictors
+
+```{r it_u18_gdp}
+start_yr <- 1990
+
+sd_new <- synthData_u20_filt[,c(1:4, 6)] %>% filter(Country!="Scotland") %>% 
+  mutate(GDPperCap = GDPperCap/1000)
+
+cc_new <- u_20_ccodes_f %>% filter(Country!="Scotland")
+
+it_u20_gdp <- testSynthIterations(
+  yrs = start_yr:1998,
+  pred = "GDPperCap",
+  data = sd_new,
+  ccodes = cc_new,
+  # data = synthData_u20[,c(1:4, 6)] %>% filter(!Country %in% exclude_u20_gdp),
+  # ccodes = u_20_ccodes %>% filter(!Country %in% exclude_u20_gdp),
+  n = 4,
+  predictors = NULL,
+  time.optimise = start_yr:1998,
+  dependent = "pRate"
+) %>%
+  arrange(groups, mspe)
+
+it_u20_pr <-  testSynthIterations(
+  yrs = start_yr:1998,
+  pred = "pRate",
+  data = sd_new,
+  ccodes = cc_new,
+  n = 4,
+  time.optimise = start_yr:1998
+) %>% arrange(groups, mspe)
+
+# dataprep(
+#   foo = synthData_u20_filt[,c(1:4, 6)] %>% filter(Country!="Scotland"),
+#   special.predictors = list(list("GDPperCap", 1990:1998, "mean")),
+#   time.predictors.prior = 1990:1998,
+#   dependent = "pRate",
+#   time.plot = 1990:1998,
+#   time.optimize.ssr = 1990:1998,
+#   controls.identifier = u_20_ccodes_f %>% filter(Country != "England and Wales" & Country!="Scotland") %>% pull(Code),
+#   treatment.identifier = u_20_ccodes_f %>% filter(Country == "England and Wales") %>% pull(Code),
+#       unit.variable = "Code",
+#       unit.names.variable = "Country",
+#       time.variable = "Year"
+# )
+
+```
+
+```{r}
+it_u20_gdp %>% 
+    group_by(groups) %>% 
+  top_n(3, -mspe)  
+
+
+it_u20_pr %>% 
+    group_by(groups) %>% 
+  top_n(3, -mspe)  
+```
+
+```{r}
+sp_u20_gdp <- it_u20_gdp$sPred[it_u20_gdp$iteration == 4][[1]]
+sp_u20_pr <- it_u20_pr$sPred[it_u20_pr$iteration == 4][[1]]
+
+
+synthPrep(
+  data = sd_new,
+  "u20_gdp",
+  dependent = "pRate",
+  special.predictors = append(sp_u20_gdp, sp_u20_pr),
+  time.optimise.ssr = start_yr:1998,
+  time.predictors.prior = start_yr:1998,
+  time.plot = start_yr:2013
+)
+
+```
+
+```{r}
+st_u20_gdp$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, Weight = w.weights) %>% 
+  kable(caption = "Country weights")
+
+st_u20_gdp$tab.v %>% kable(caption = "Predictor weights")
+
+st_u20_gdp$tab.pred %>% kable(caption = "Predictor balance between synthetic and treated units")
+```
+
+```{r}
+gg_synth(md = md_u20_gdp, post = FALSE)
+# gg_synth(md = md_u20_sp, post = FALSE)
+```

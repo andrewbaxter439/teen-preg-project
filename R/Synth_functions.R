@@ -346,6 +346,7 @@ testSynthIterations <- function(yrs = 1990:1998,
                                 n = 5,
                                 predictors = NULL,
                                 time.optimise = 1990:1998,
+                                dependent = pred,
                                 ...) {
   
   require(gtools)
@@ -405,7 +406,7 @@ testSynthIterations <- function(yrs = 1990:1998,
       predictors = predictors,
       special.predictors = special.preds[map_lgl(special.preds, ~ sum(.$yrs) > 0)],
       time.predictors.prior = yrs,
-      dependent = pred,
+      dependent = dependent,
       unit.variable = "Code",
       unit.names.variable = "Country",
       time.variable = "Year",
@@ -717,9 +718,12 @@ p <-  md %>%
 
 
 # iterating through removal of top-weighted countries --------------------------------------------------------
-gg_iterateCountries <- function(itco, jitter = FALSE, n = 10) {
+gg_iterateCountries <- function(itco, jitter = FALSE, n = 10, float_labs = FALSE) {
   
 require(purrr)
+  require(ggrepel)
+  require(ggplot2)
+  require(dplyr)
 
 if(jitter){
   height <- itco %>%
@@ -736,19 +740,49 @@ order_co <-
   reduce(bind_rows) %>% 
   pull()
 
-itco %>% 
+df <- itco %>% 
   reduce(bind_rows) %>% 
   top_n(n, -mspe) %>%
   # filter(mspe<5*min(mspe)) %>%
   select(mspe, unit.names, label, gaps) %>% 
   unnest(gaps) %>% 
   mutate(label = factor(label, levels = order_co)) %>% 
-  ggplot(aes(Year, Gap)) + 
+  mutate(mgrp = as.numeric(factor(signif(mspe, 2)))) %>%
+  group_by(mgrp) %>% 
+  mutate(mems = n()/24,
+         member = as.numeric(factor(unit.names)),
+         adjust = -(mems+1)/2+member) %>% 
+  ungroup() %>% 
+         mutate(nGap = Gap + 0.005*adjust*max(Gap))
+
+plot <- df %>% 
+  ggplot(aes(Year, nGap)) + 
   geom_line(size = 1, aes(col = label), position = position_jitter(h=height, w = 0)) + 
   theme_minimal() +
   theme(panel.grid = element_blank()) +
   geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +
   geom_segment(x = min(itco[[1]]$gaps[[1]]$Year), xend = 2013, y = 0, yend = 0, col = "black") +
   scale_colour_sphsu(name = "Top weighted country")
+
+if(float_labs){
+  labs <- df %>% 
+    filter(Year == 2013) %>% 
+    select(Year, nGap, label)
+  plot <-
+    plot +
+    theme(legend.position = "none") +
+    coord_cartesian(clip = "off") +
+    geom_text_repel(data = labs,
+                    aes(x = (Year), y = nGap, label = label),
+                    hjust = 0,
+                    direction = "y",
+                    nudge_x = 0.8,
+                    xlim = c(NA, 2030)
+                    ) +
+    theme(plot.margin = unit(c(0,10,0,0), "cm"))
+    
+}
+
+return(plot)
 
 }

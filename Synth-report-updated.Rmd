@@ -3,16 +3,16 @@ title: "Synth reporting"
 author: "Andrew Baxter"
 date: "10/09/2019"
 output: 
-  html_document:
-    toc: true
-    toc_depth: 2
-    number_sections: true
-    toc_float: 
-      collapsed: false
-  # word_document:
-  #   fig_height: 6
-  #   fig_width: 8
-  #   reference_docx: report_template.docx
+  # html_document:
+  #   toc: true
+  #   toc_depth: 2
+  #   number_sections: true
+  #   toc_float: 
+  #     collapsed: false
+  word_document:
+    fig_height: 6
+    fig_width: 8
+    reference_docx: report_template.docx
 always_allow_html: yes
 ---
 
@@ -142,7 +142,8 @@ pb_plot <-
   #       title = element_text(size = 12)) +
   labs(title = "England vs Synthetic Control, no added predictors - country placebo")
 
-ggplotly(pb_plot)  # %>% 
+pb_plot
+# ggplotly(pb_plot)  # %>% 
 #  api_create(filename = "Plot 43")
 ```
 ```{r pp_u18_sp}
@@ -227,7 +228,8 @@ pb_plot <-
 gg_gaps(md_u20_sp, pl_u20_filt) + 
   labs(title = "England vs Synthetic Control, no added predictors - country placebo")
 
-ggplotly(pb_plot)  #%>% 
+pb_plot
+# ggplotly(pb_plot)  #%>% 
 #  api_create(filename = "Plot 49")
 ```
 ```{r pp_u20_sp}
