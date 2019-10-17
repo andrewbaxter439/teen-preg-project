@@ -105,14 +105,35 @@ it_u20_mob <- testSynthIterations(
   pred = "MobilePhones",
   data = sd_noScot,
   ccodes = cc_noScot,
-  n = 2,
+  n = 4,
   predictors = NULL,
   time.optimise = 1990:1998,
   dependent = "pRate"
 ) %>%
   arrange(groups, mspe)
 
-synthPrep(sd_noScot,
-          "u20_mobiles",
-          dependent = "pRate",
-          )
+it_u20_urb <- testSynthIterations(
+  yrs = 1990:2013,
+  pred = "UrbanPop",
+  data = sd_noScot,
+  ccodes = cc_noScot,
+  n = 4,
+  predictors = NULL,
+  time.optimise = 1990:1998,
+  dependent = "pRate"
+) %>%
+  arrange(groups, mspe)
+
+it_u20_gdp <- testSynthIterations(
+  yrs = 1990:2013,
+  pred = "GDPperCap",
+  data = sd_noScot,
+  ccodes = cc_noScot,
+  n = 4,
+  predictors = NULL,
+  time.optimise = 1990:1998,
+  dependent = "pRate"
+) %>%
+  arrange(groups, mspe)
+
+save(it_u20_mob, it_u20_gdp, it_u20_urb, file = "Data/sp_iterations.rdata")
