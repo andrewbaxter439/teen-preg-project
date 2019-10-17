@@ -54,7 +54,7 @@ opt_y1 <- 1990
 synthPrep(data.frame(cheeky_data[,c(1:4, 6, 10)]),
           "trial_synth2",
           dependent = "pRate",
-          special.predictors = append(sp_u20_filt, append(sp_u20_edu, sp_u20_gdp)), 
+          special.predictors = append(sp_u20_filt, sp_u20_edu), 
           time.optimise.ssr = opt_y1:1998,
           time.predictors.prior = opt_y1:1998,
           time.plot = opt_y1:2013)
@@ -111,6 +111,19 @@ it_u20_mob <- testSynthIterations(
   dependent = "pRate"
 ) %>%
   arrange(groups, mspe)
+
+
+
+# load data ---------------------------------------------------------------
+
+load("Data/sp_iterations.rdata")
+
+it_u20_mob %>% 
+  group_by(groups) %>% 
+  top_n(3, -mspe)  
+
+sp_u20_mob <- it_u20_mob$sPred[it_u20_mob['iteration']==1522][1]
+it_u20_mob$v_weights[it_u20_mob['iteration']==1522][[1]]$v_weight
 
 synthPrep(sd_noScot,
           "u20_mobiles",
