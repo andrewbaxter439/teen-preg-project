@@ -405,7 +405,7 @@ testSynthIterations <- function(yrs = 1990:1998,
       foo = data.frame(data %>% filter(Year >= yrs[1])),
       predictors = predictors,
       special.predictors = special.preds[map_lgl(special.preds, ~ sum(.$yrs) > 0)],
-      time.predictors.prior = yrs,
+      time.predictors.prior = yrs[1]:1998,
       dependent = dependent,
       unit.variable = "Code",
       unit.names.variable = "Country",
@@ -429,7 +429,7 @@ testSynthIterations <- function(yrs = 1990:1998,
     mspe <- so$loss.v[1,1]
     
     w <- st$tab.w
-    v <- tibble(Pred = row.names(st$tab.v), v_weight = st$tab.v[1])
+    v <- tibble(Pred = row.names(st$tab.v), v_weight = as.numeric(st$tab.v))
 
     sps <- special.preds[map_lgl(special.preds, ~ sum(.$yrs) > 0)]
     
