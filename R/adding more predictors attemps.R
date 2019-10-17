@@ -99,20 +99,47 @@ pre_MSPE(md_u20_gdp)
 sd_noScot <- synthData_u20_filt %>% filter(Country != "Scotland")
 cc_noScot <- u_20_ccodes_f %>% filter(Country != "Scotland")
 
+# Iterating bits ----------------------------------------------------------
+
+
 
 it_u20_mob <- testSynthIterations(
   yrs = 1990:2013,
   pred = "MobilePhones",
   data = sd_noScot,
   ccodes = cc_noScot,
-  n = 2,
+  n = 4,
   predictors = NULL,
   time.optimise = 1990:1998,
   dependent = "pRate"
 ) %>%
   arrange(groups, mspe)
 
+it_u20_urb <- testSynthIterations(
+  yrs = 1990:2013,
+  pred = "UrbanPop",
+  data = sd_noScot,
+  ccodes = cc_noScot,
+  n = 4,
+  predictors = NULL,
+  time.optimise = 1990:1998,
+  dependent = "pRate"
+) %>%
+  arrange(groups, mspe)
 
+it_u20_gdp <- testSynthIterations(
+  yrs = 1990:2013,
+  pred = "GDPperCap",
+  data = sd_noScot,
+  ccodes = cc_noScot,
+  n = 4,
+  predictors = NULL,
+  time.optimise = 1990:1998,
+  dependent = "pRate"
+) %>%
+  arrange(groups, mspe)
+
+save(it_u20_mob, it_u20_gdp, it_u20_urb, file = "Data/sp_iterations.rdata")
 
 # load data ---------------------------------------------------------------
 
@@ -129,3 +156,5 @@ synthPrep(sd_noScot,
           "u20_mobiles",
           dependent = "pRate",
           )
+
+
