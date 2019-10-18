@@ -149,12 +149,31 @@ it_u20_mob %>%
   group_by(groups) %>% 
   top_n(3, -mspe)  
 
-sp_u20_mob <- it_u20_mob$sPred[it_u20_mob['iteration']==1522][1]
+it_u20_gdp %>% 
+  group_by(groups) %>% 
+  top_n(3, -mspe)  
+
+it_u20_urb %>% 
+  group_by(groups) %>% 
+  top_n(3, -mspe)  
+
+sp_u20_mob <- it_u20_mob$sPred[it_u20_mob['iteration']==1522][1][[1]][1:2]
+sp_u20_gdp <- it_u20_mob$sPred[it_u20_gdp['iteration']==171][1][[1]]
+sp_u20_urb <- it_u20_mob$sPred[it_u20_urb['iteration']==2048][1][[1]]
+
 it_u20_mob$v_weights[it_u20_mob['iteration']==1522][[1]]$v_weight
+it_u20_gdp$v_weights[it_u20_mob['iteration']==171][[1]]$v_weight
+it_u20_mob$v_weights[it_u20_mob['iteration']==2048][[1]]$v_weight
 
 synthPrep(sd_noScot,
-          "u20_mobiles",
+          "u20_all",
           dependent = "pRate",
+          special.predictors = append(sp_u20_gdp, sp_u20_mob) %>% append(sp_u20_urb) %>% append(sp_u20_filt),
+          time.optimise.ssr = 1990:1998,
+          time.plot = 1990:2013,
+          time.predictors.prior = 1990:1998
           )
 
-
+gg_synth(md = md_u20_all)
+st_u20_all$tab.w
+st_u20_all$tab.v
