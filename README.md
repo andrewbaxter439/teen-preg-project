@@ -1,4 +1,6 @@
+<!-- badges: start -->
 [![DOI](https://zenodo.org/badge/171463624.svg)](https://zenodo.org/badge/latestdoi/171463624)
+<!-- badges: end -->
 
 # Project - Natural Experimental testing of teenage pregnancy rates and causes
 
