@@ -45,14 +45,15 @@ gg_synth <- function(dp = NULL, md = NULL, yr = 1999, post = FALSE, mspe = NULL,
   }
   
   
-  plot <-  ggplot(md, aes(Year, Rate, col = Group, linetype = Group)) +
+  plot <-  ggplot(md, aes(Year, Rate, col = Group)) +  # no linetype change
+  # plot <-  ggplot(md, aes(Year, Rate, col = Group, linetype = Group)) +
     geom_line(size = 2) +
     theme_sphsu_light() +
     ylab(paste0("Under-", agegrp, " rate (per 1,000 women)")) +
     theme(legend.title = element_blank(),
           panel.grid = element_blank(),
           line = element_blank()) +
-    scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +
+    # scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +  # no linetype change
     scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
     geom_vline(xintercept = 1998.5, linetype = "dotted") +
     scale_x_continuous(limits = c(NA, xmax)) +

@@ -18,27 +18,49 @@ load("Data/placebo_country_b.rdata")  # outputted from 'Synth_create_sps.R'
 load("Data/time_placebos_b.rdata")  # outputted from 'Synth_time_pbs.R'
 source('R/Synth_functions.R')
 
-# Predictor 3 - spending on education ------------------------------------------------
+# Predictor 3 - spending on education  -------------------------------------
 
 edu_all <- read_csv("Downloaded data files/education_spending.csv", skip = 3)
 edu_all[edu_all$"Country Code" == "USA",]$`Country Name` <- "United States of America"
 
-edu_pred <- edu_all %>% filter(`Country Name` %in% c(u_18_ccodes_f$Country, "United Kingdom")) %>% 
-  select(Country = `Country Name`, `1990`:`2013`) %>% 
-  gather("Year", "edu_spend", -1) %>% 
-  mutate(yrgrp = ifelse(Year<1996, 1, ifelse(Year<1999, 2, 3))) %>% 
-  group_by(yrgrp, Country) %>% 
-  mutate(edu_spend_mean = mean(edu_spend, na.rm = TRUE)) %>% 
-  ungroup() %>% 
+edu_pred <- edu_all %>% filter(`Country Name` %in% c(u_18_ccodes_f$Country, "United Kingdom")) %>%
+  select(Country = `Country Name`, `1990`:`2013`) %>%
+  gather("Year", "edu_spend", -1) %>%
+  mutate(yrgrp = ifelse(Year<1996, 1, ifelse(Year<1999, 2, 3))) %>%
+  group_by(yrgrp, Country) %>%
+  mutate(edu_spend_mean = mean(edu_spend, na.rm = TRUE)) %>%
+  ungroup() %>%
   mutate(Country = ifelse(Country=="United Kingdom", "England and Wales", Country),
-         Year = as.numeric(Year)) %>% 
+         Year = as.numeric(Year)) %>%
   select(Country, Year, edu_spend_mean)
 
-newdata <- synthData_u20_filt %>% left_join(edu_pred, by = c("Country", "Year")) %>% filter(Country!="Scotland", Country != "United States of America")
+
+# ** other edu data from oecd ---------------------------------------------
+
+edu_full <- read_csv("Downloaded data files/ed_spend_oecd.csv") %>% mutate(Code = LOCATION)
+ccodes <- read_tsv("country_codes.txt") %>% 
+  bind_rows(tibble(Code = c("GBR", "GBR", "FRA", "DEU"),
+                   Country = c("England and Wales", "Scotland", "France", "Germany")))
+
+edu_spend <- edu_full %>% 
+  left_join(ccodes, by = "Code") %>% 
+  select(Country, Year = TIME, edu_spend = Value)
+
+newdata <- synthData_u20_filt %>% 
+  left_join(edu_spend, by = c("Country", "Year"))
+
+View(edu_full)
+
+# ** join with other data -------------------------------------------------
+
+
+
+# newdata <- synthData_u20_filt %>% left_join(edu_pred, by = c("Country", "Year")) %>% filter(Country!="Scotland", Country != "United States of America")
 
 sp_u20_edu <- list(
-  list("edu_spend_mean", 1995, "mean"),
-  list("edu_spend_mean", 1997, "mean")
+  list("edu_spend", 1995:1998, "mean"),
+  list("edu_spend", 1999:2007, "mean"),
+  list("edu_spend", 2008:2013, "mean")
 )
 
 newdata %>% 
@@ -65,39 +87,19 @@ gg_synth(md = md_trial_synth2) +
 st_trial_synth2$tab.v
 st_trial_synth2$tab.w
 
-# playing around ----------------------------------------------------------
-
-
-as.matrix(dp_u20_gdp$Z0) %*% st_u20_gdp$tab.w$w.weights
-
-md_u20_gdp %>% filter(Year<1999, Group == "Synthetic")
-
-V <- diag(as.numeric(st_u20_gdp$tab.v), length(st_u20_gdp$tab.v), length(st_u20_gdp$tab.v))
-V2 <- diag(c(0.1,0.1,0.3,0.1,0.1,0.3), 6, 6)
-W <- st_u20_gdp$tab.w$w.weights
-
-X1 <- dp_u20_gdp$X1
-X0 <- dp_u20_gdp$X0
-Z1 <- dp_u20_gdp$Z1
-Z0 <- dp_u20_gdp$Z0
-
-(t(X0) %*% V) %*% X0
-
-t(X1 - X0 %*% W) %*% V2 %*% (X1 - X0 %*% W)
-
-t(Z1 - Z0 %*% W) %*% (Z1 - Z0 %*% W)
-
-
-so_u20_gdp$loss.w
-so_u20_gdp$loss.v
-
-pre_MSPE(md_u20_gdp)
-
-
 # predictor 4 - mobile phone ownership ------------------------------------
 
-sd_noScot <- synthData_u20_filt %>% filter(Country != "Scotland")
+sd_noScot <- newdata %>% filter(Country != "Scotland")
 cc_noScot <- u_20_ccodes_f %>% filter(Country != "Scotland")
+
+sd_plusScot <- newdata %>% 
+  filter(Country == "Scotland") %>%
+  select(Code, Country, Year, pRate, rate, MF_ratio, edu_spend) %>% 
+  right_join(newdata %>% 
+               select(Country, Year, GDPperCap, MobilePhones, UrbanPop) %>% 
+               filter(Country== "England and Wales") %>% 
+               mutate(Country = "Scotland")) %>% 
+  bind_rows(sd_noScot)
 
 # Iterating bits ----------------------------------------------------------
 
@@ -157,23 +159,61 @@ it_u20_urb %>%
   group_by(groups) %>% 
   top_n(3, -mspe)  
 
-sp_u20_mob <- it_u20_mob$sPred[it_u20_mob['iteration']==1522][1][[1]][1:2]
-sp_u20_gdp <- it_u20_mob$sPred[it_u20_gdp['iteration']==171][1][[1]]
-sp_u20_urb <- it_u20_mob$sPred[it_u20_urb['iteration']==2048][1][[1]]
-
+# Checking for unweighted parts
 it_u20_mob$v_weights[it_u20_mob['iteration']==1522][[1]]$v_weight
-it_u20_gdp$v_weights[it_u20_mob['iteration']==171][[1]]$v_weight
-it_u20_mob$v_weights[it_u20_mob['iteration']==2048][[1]]$v_weight
+it_u20_gdp$v_weights[it_u20_gdp['iteration']==171][[1]]$v_weight
+it_u20_urb$v_weights[it_u20_urb['iteration']==2048][[1]]$v_weight
 
-synthPrep(sd_noScot,
+# Selecting for weighted years in each special predictor
+# sp_u20_mob <- it_u20_mob$sPred[it_u20_mob['iteration']==1522][1][[1]][1:2]
+# sp_u20_gdp <- it_u20_gdp$sPred[it_u20_gdp['iteration']==171][1][[1]][2:4]
+# sp_u20_urb <- it_u20_urb$sPred[it_u20_urb['iteration']==2048][1][[1]][1]
+
+sp_u20_mob <- it_u20_mob$sPred[it_u20_mob['iteration']==1522][1][[1]]
+sp_u20_gdp <- it_u20_gdp$sPred[it_u20_gdp['iteration']==171][1][[1]]
+sp_u20_urb <- it_u20_urb$sPred[it_u20_urb['iteration']==2048][1][[1]]
+
+
+# under 20 - all predictors -----------------------------------------------
+
+
+synthPrep(sd_plusScot %>% filter(Country!="Iceland"),
           "u20_all",
           dependent = "pRate",
-          special.predictors = append(sp_u20_gdp, sp_u20_mob) %>% append(sp_u20_urb) %>% append(sp_u20_filt),
+          special.predictors = append(sp_u20_gdp, sp_u20_mob) %>% 
+            append(sp_u20_urb) %>% 
+            append(sp_u20_filt) %>% 
+            append(sp_u20_edu),
           time.optimise.ssr = 1990:1998,
           time.plot = 1990:2013,
           time.predictors.prior = 1990:1998
-          )
+)
 
-gg_synth(md = md_u20_all)
+gg_synth(md = md_u20_all) + xlim(1990, 2013)
 st_u20_all$tab.w
 st_u20_all$tab.v
+
+
+# Under-18s - all predictors ----------------------------------------------
+
+
+newdata_u18 <- synthData_u18_filt %>% 
+  select(-GDPperCap, -MF_ratio, -UrbanPop, -MobilePhones) %>% 
+  left_join(sd_plusScot %>% select(Country, Year, MF_ratio, UrbanPop, MobilePhones, edu_spend, GDPperCap))
+
+synthPrep(newdata_u18 %>% filter(Country!="Iceland"),
+          "u18_all",
+          dependent = "rate",
+          special.predictors = append(sp_u20_gdp, sp_u20_mob) %>% 
+            append(sp_u20_urb) %>% 
+            append(sp_u18_filt) %>% 
+            append(sp_u20_edu),
+          time.optimise.ssr = 1990:1998,
+          time.plot = 1990:2013,
+          time.predictors.prior = 1990:1998
+)
+
+gg_synth(md = md_u18_all) + xlim(1990, 2013)
+st_u18_all$tab.w
+st_u18_all$tab.v
+
