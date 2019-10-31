@@ -178,9 +178,22 @@ api_create(last_plot(), filename = "Plot 43")
 }
 
 ```
+```{r rank_u18, include=FALSE}
+pp_u18_sp <- gg_pre_postMSPE(md_u18_sp, pl_u18_filt) + labs(title = "Post/pre-TPS mean squared prediction error")
+
+p18 <- ggplot_build(pp_u18_sp)
+
+rank_u18 <- p18$plot$data %>% 
+  arrange(desc(ratio)) %>% 
+  ungroup() %>% 
+  mutate(rank = rank(-ratio)) %>% 
+  select(Country, ratio, rank)
+```
+
+In placebo-country tests, England and Wales ranked `r rank_u18 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u18)` countries by pre/post-MSPE ratio.
+
 ```{r pp_u18_sp}
 
-pp_u18_sp <- gg_pre_postMSPE(md_u18_sp, pl_u18_filt) + labs(title = "Post/pre-TPS mean squared prediction error")
 pp_u18_sp
 
 ```
@@ -282,9 +295,22 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
  api_create(last_plot(), filename = "Plot 49")
 }
 ```
+```{r rank_u20, include=FALSE}
+pp_u20_sp <- gg_pre_postMSPE(md_u20_sp, pl_u20_filt) + labs(title = "Post/pre-TPS mean squared prediction error")
+
+p20 <- ggplot_build(pp_u20_sp)
+
+rank_u20 <- p20$plot$data %>% 
+  arrange(desc(ratio)) %>% 
+  ungroup() %>% 
+  mutate(rank = rank(-ratio)) %>% 
+  select(Country, ratio, rank)
+```
+
+In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
+
 ```{r pp_u20_sp}
 
-pp_u20_sp <- gg_pre_postMSPE(md_u20_sp, pl_u20_filt) + labs(title = "Post/pre-TPS mean squared prediction error")
 pp_u20_sp
 
 ```

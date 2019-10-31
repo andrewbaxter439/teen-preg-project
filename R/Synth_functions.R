@@ -243,7 +243,9 @@ rateDiff <- function(md, age = "under 18") {
     summarise(tot_rate = sum(Gap),
               tot_diff = sum(ab_diff))
   
-  list <- list(tot_rate = round(df[[1]], 2), tot_diff = round(df[[2]], 0) %>% as.character() %>% gsub("(^.*)(\\d{3})$", "\\1,\\2",.))
+  list <- list(tot_rate = round(df[[1]], 2),
+               tot_diff = round(df[[2]], 0) %>% as.character() %>% gsub("(^.*)(\\d{3})$", "\\1,\\2",.),
+               mean_pop = mean(pop$sumPops))
   return(list)
 }
 
@@ -723,7 +725,7 @@ p <-  md %>%
            label = ifelse(Country=="England and Wales", paste0("England and Wales; ratio = ", signif(ratio, 3)), NA),
            xintercept = ifelse(Country=="England and Wales", ratio, NA)) %>% 
     ggplot(aes(ratio)) +
-    geom_histogram(fill = sphsu_cols("Cobalt"), col = "darkgrey") +
+    geom_histogram(fill = sphsu_cols("Cobalt"), col = "darkgrey", bins = 60) +
     theme_minimal() + 
   theme(panel.grid = element_blank())
 
