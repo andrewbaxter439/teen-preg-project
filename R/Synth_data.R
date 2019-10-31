@@ -224,7 +224,7 @@ u_20_ccodes_f <- synthData_u20_filt %>%
   select(Country, Code) %>% 
   unique()
 
-save(synthData_u18_filt, synthData_u20_filt, u_18_ccodes_f, u_20_ccodes_f, file = "Data/synth_data_b.rdata")
+save(synthData, synthData_u18_filt, synthData_u20_filt, u_18_ccodes_f, u_20_ccodes_f, file = "Data/synth_data_b.rdata")
 
 # exclusion lists --------------------------------------------------------------------------------------------
 

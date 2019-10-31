@@ -226,6 +226,27 @@ gg_gaps <- function(md, pl, dp = NULL, mspe_limit = NULL, title = FALSE, subtitl
   
 }
 
+rateDiff <- function(md, age = "under 18") {
+  
+  pop <- synthData %>% filter(Year > 1998,
+                       Year< 2014,
+                       Country == "England and Wales",
+                       grepl(age, .$agegrp, ignore.case = TRUE)) %>% 
+    select(Year, sumPops)
+  
+  df <- md %>% 
+    filter(Year > 1998) %>% 
+    spread(Group, Rate) %>% 
+    mutate(Gap = Treated - Synthetic) %>% 
+    right_join(pop, by = "Year") %>% 
+    mutate(ab_diff = Gap * sumPops / 1000) %>% 
+    summarise(tot_rate = sum(Gap),
+              tot_diff = sum(ab_diff))
+  
+  list <- list(tot_rate = round(df[[1]], 2), tot_diff = round(df[[2]], 0) %>% as.character() %>% gsub("(^.*)(\\d{3})$", "\\1,\\2",.))
+  return(list)
+}
+
 
 interpolateAb <- function(country, data = synth_data_plus_ab){
   cdata_u20 <- data %>% 

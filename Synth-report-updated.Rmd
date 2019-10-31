@@ -3,18 +3,18 @@ title: "Synth reporting"
 author: "Andrew Baxter"
 date: "10/09/2019"
 output: 
-  pdf_document:
-    fig_height: 5
-    fig_width: 8
-    toc: true
-    toc_depth: 2
-    number_sections: true
-  # html_document:
+  # pdf_document:
+  #   fig_height: 5
+  #   fig_width: 8
   #   toc: true
   #   toc_depth: 2
   #   number_sections: true
-  #   toc_float:
-  #     collapsed: false
+  html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    toc_float:
+      collapsed: false
   # word_document:
   #   fig_height: 6
   #   fig_width: 8
@@ -134,6 +134,8 @@ synthPrep(synthData_u18_filt[,1:4],
           )
 ```
 
+Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(md_u18_sp, "under 18")$tot_diff` births.
+
 ```{r md_u18_sp_graph}
 gr_u18_sp <- gg_synth(md = md_u18_sp, post = TRUE) 
 
@@ -235,6 +237,9 @@ synthPrep(synthData_u20_filt[,1:4],
           time.plot = opt_y1:2013
           )
 ```
+
+Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(md_u20_sp, "under 20")$tot_diff` pregnancies.
+
 ```{r md_u20_sp_graph}
 # graph
 gr_u20_sp <- gg_synth(md = md_u20_sp, post = TRUE) 
