@@ -244,8 +244,9 @@ rateDiff <- function(md, age = "under 18") {
               tot_diff = sum(ab_diff))
   
   list <- list(tot_rate = round(df[[1]], 2),
-               tot_diff = round(df[[2]], 0) %>% as.character() %>% gsub("(^.*)(\\d{3})$", "\\1,\\2",.),
-               mean_pop = mean(pop$sumPops))
+               tot_diff = round(df[[2]], 0) %>% format(big.mark = ','),
+               mean_pop = round(mean(pop$sumPops), 0)  %>% format(big.mark = ',')
+               )
   return(list)
 }
 
@@ -786,7 +787,8 @@ plot <- df %>%
   theme(panel.grid = element_blank()) +
   geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +
   geom_segment(x = min(itco[[1]]$gaps[[1]]$Year), xend = 2013, y = 0, yend = 0, col = "black") +
-  scale_colour_sphsu(name = "Top weighted country")
+  scale_colour_sphsu(name = "Top weighted country") +
+  ylab("Gap = Treated - Synthetic Control")
 
 if(float_labs){
   labs <- df %>% 

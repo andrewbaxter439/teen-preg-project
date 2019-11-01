@@ -134,7 +134,7 @@ synthPrep(synthData_u18_filt[,1:4],
           )
 ```
 
-Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(md_u18_sp, "under 18")$tot_diff` births.
+Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(md_u18_sp, "under 18")$tot_diff` births (to an average population of `r rateDiff(md_u18_sp, "under 18")$mean_pop` women).
 
 ```{r md_u18_sp_graph}
 gr_u18_sp <- gg_synth(md = md_u18_sp, post = TRUE) 
@@ -257,7 +257,7 @@ synthPrep(synthData_u20_filt[,1:4],
           )
 ```
 
-Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(md_u20_sp, "under 20")$tot_diff` pregnancies.
+Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(md_u20_sp, "under 20")$tot_diff` pregnancies (to an average population of `r rateDiff(md_u20_sp, "under 20")$mean_pop` women).
 
 ```{r md_u20_sp_graph}
 # graph

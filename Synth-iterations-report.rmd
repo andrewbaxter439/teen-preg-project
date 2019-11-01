@@ -49,7 +49,7 @@ gr_tops_u18_filt
 
 ## Removing top countries
 
-A further iterative cycle constructed sequential synthetic controls, removing the previous top-weighted country to test for over-reliance on very few abnormal countries:
+A further iterative cycle constructed sequential synthetic controls, removing the previous top-weighted country to test for over-reliance on very few abnormal countries. Labels represent the top-weighted country in each analysis by weight and pre-itervention MSPE:
 
 ```{r itco_u18_sp}
 gr_itco_u18_filt <- gg_iterateCountries(itco_u18_filt, float_labs = TRUE)
