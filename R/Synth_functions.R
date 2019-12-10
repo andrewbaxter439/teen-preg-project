@@ -54,7 +54,11 @@ gg_synth <- function(dp = NULL, md = NULL, yr = 1999, post = FALSE, mspe = NULL,
           panel.grid = element_blank(),
           line = element_blank()) +
     # scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +  # no linetype change
-    scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
+    scale_colour_manual(name = "Data", 
+                        breaks = c("Treated", "Synthetic"),
+                        labels = c("England and Wales", "Synthetic"), 
+                        values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
+    # scale_colour_manual(name = "Data", labels = c("England and Wales", "Synthetic"), values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
     geom_vline(xintercept = 1998.5, linetype = "dotted") +
     scale_x_continuous(limits = c(NA, xmax)) +
     scale_y_continuous(limits = c(0, NA)) +
@@ -134,6 +138,7 @@ require(dplyr)
   
   ccodes <- data %>% 
     select(Code, Country) %>% 
+    arrange(Code) %>% 
     unique()
   
   placebos <- data.frame()
@@ -516,6 +521,7 @@ synthPrep <- function(data,
 
 ccodes <- data %>% 
   select(Code, Country) %>% 
+  arrange(Code) %>% 
   unique()
   
   if(is.null(time.predictors.prior)){

@@ -128,9 +128,9 @@ synthData <- birthRates %>%
   left_join(popRatios, by = c("Code", "Year", "agegrp")) %>%     # not useful?
   left_join(MobilePhones, by = c("Country", "Year")) %>% 
   left_join(UrbanPop, by = c("Country", "Year"))
-  left_join(, by = c("Country", "Year"))
-  left_join(, by = c("Country", "Year"))
-  left_join(, by = c("Country", "Year"))
+  # left_join(, by = c("Country", "Year"))
+  # left_join(, by = c("Country", "Year"))
+  # left_join(, by = c("Country", "Year"))
   
   
 # write.csv(synthData, "Downloaded data files/SynthData in progress.csv")
@@ -217,9 +217,13 @@ abortions_tidy <- abortions %>%
          Code = ifelse(Code == "FRA", "FRATNP",
                        ifelse(Code == "DEU", "DEUTNP",
                               ifelse(Code == "GBR", "GBR_NP", Code)))) %>% 
-  left_join(ccodes_new, by = "Code") %>% 
+  left_join(ccodes, by = "Code") %>% 
   select(Code, Country, Year:agegrp) %>% 
   semi_join(synthData, by = c("Code", "Country", "Year", "agegrp"))
+
+US_abortions <- read_csv("Downloaded data files/USA_u20_abortions.csv")
+
+abortions_tidy <- bind_rows(abortions_tidy, US_abortions)
 
 ab_missing <- abortions_tidy %>% 
   spread(Year, Abortions)
@@ -264,18 +268,6 @@ synth_data_interp_ab %<>%
   left_join(Sco_rates, by = c("Country", "Year")) %>% 
   bind_rows(synth_data_interp_ab %>% filter(Country != "Scotland" | agegrp != "Under 20"))
 
-
-US_rates <- allUKrates_u20 %>% 
-  filter(Country == "U.S.A.") %>% 
-  gather("Year", "pRate", -1) %>% 
-  mutate(Year = as.numeric(Year),
-         Country = "United States of America")
-
-synth_data_interp_ab %<>%
-  filter(Country == "United States of America", agegrp == "Under 20") %>% 
-  select(-pRate) %>% 
-  left_join(US_rates, by = c("Country", "Year")) %>% 
-  bind_rows(synth_data_interp_ab %>% filter(Country != "United States of America" | agegrp != "Under 20"))
 
 synth_data_interp_ab %<>%
   bind_rows(NZ_totalrates, .)

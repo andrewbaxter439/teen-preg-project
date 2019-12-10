@@ -1,6 +1,7 @@
 load('Data/synth_data.rdata') # outputted from 'Synth_data.R'
 load('Data/synth_data_b.rdata') # outputted from 'Synth_data.R'
 load('Data/special_preds.rdata')  # outputted from 'Synth_create_sps.R'
+load('Data/noScot.rdata')
 source('R/Synth_functions.R')
 
 # Model 1 - u18 Sp -------------------------------------------------------------------------------------------
@@ -345,4 +346,86 @@ for (y in 1995:2005){
   super_md_u20_filt <- bind_rows(super_md_u20_filt, md)
 }
 
-save(super_md_u18_filt, super_md_u20_filt, file = "Data/time_placebos_b.rdata")
+
+# ** Model 9 - under 18 no scot ----------------------------------------------
+
+super_md_u18_ns <- tibble()
+
+for (y in 1995:2005){
+  sp <-   purrr::map(sp_u18_ns, 
+                     function(x) list(var = 
+                                        ifelse(min(x$yrs)<y,
+                                               x[[1]],
+                                               NA),
+                                      yrs = 
+                                        x$yrs[x$yrs<y],
+                                      op = 
+                                        ifelse(min(x$yrs)<y,
+                                               x[[3]],
+                                               NA))) %>% 
+    purrr::modify_if(anyNA, function(x) NULL)%>% 
+    purrr::modify_if(anyNA, function(x) NULL)
+  
+  dp <- dataprep(
+    foo = sd_noScot,
+    special.predictors = sp,
+    predictors.op = "mean",
+    time.predictors.prior = 1990:y,
+    dependent = "rate",
+    unit.variable = "Code",
+    unit.names.variable = "Country",
+    time.variable = "Year",
+    treatment.identifier = ccodes_ns$Code[ccodes_ns$Country =="England and Wales"],
+    controls.identifier =  ccodes_ns$Code[ccodes_ns$Country !="England and Wales"],
+    time.optimize.ssr = 1990:y,
+    time.plot = 1990:2013
+  )
+  md <- predvalues_synth(dp, synth_outputs = FALSE, yr = y)
+  md <- md %>% 
+    mutate(IntYr = y,
+           mspe = pre_MSPE(md))
+  super_md_u18_ns <- bind_rows(super_md_u18_ns, md)
+}
+
+
+# ** Model 10 - under 20 no scot ------------------------------------------
+
+super_md_u20_ns <- tibble()
+
+for (y in 1995:2005){
+  sp <-   purrr::map(sp_u20_ns, 
+                     function(x) list(var = 
+                                        ifelse(min(x$yrs)<y,
+                                               x[[1]],
+                                               NA),
+                                      yrs = 
+                                        x$yrs[x$yrs<y],
+                                      op = 
+                                        ifelse(min(x$yrs)<y,
+                                               x[[3]],
+                                               NA))) %>% 
+    purrr::modify_if(anyNA, function(x) NULL)%>% 
+    purrr::modify_if(anyNA, function(x) NULL)
+  
+  dp <- dataprep(
+    foo = sd_noScot,
+    special.predictors = sp,
+    predictors.op = "mean",
+    time.predictors.prior = 1990:y,
+    dependent = "pRate",
+    unit.variable = "Code",
+    unit.names.variable = "Country",
+    time.variable = "Year",
+    treatment.identifier = ccodes_ns$Code[ccodes_ns$Country =="England and Wales"],
+    controls.identifier =  ccodes_ns$Code[ccodes_ns$Country !="England and Wales"],
+    time.optimize.ssr = 1990:y,
+    time.plot = 1990:2013
+  )
+  md <- predvalues_synth(dp, synth_outputs = FALSE, yr = y)
+  md <- md %>% 
+    mutate(IntYr = y,
+           mspe = pre_MSPE(md))
+  super_md_u20_ns <- bind_rows(super_md_u20_ns, md)
+}
+
+save(super_md_u18_filt, super_md_u20_filt, super_md_u18_ns, super_md_u20_ns, file = "Data/time_placebos_b.rdata")

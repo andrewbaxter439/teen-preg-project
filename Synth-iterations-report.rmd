@@ -3,11 +3,11 @@ title: "Model-testing iterations"
 author: "Andrew Baxter"
 date: "19/09/2019"
 output:
-  # html_document
-  word_document:
-    fig_height: 6
-    fig_width: 8
-    reference_docx: report_template.docx
+  html_document
+  # word_document:
+  #   fig_height: 6
+  #   fig_width: 8
+  #   reference_docx: report_template.docx
 always_allow_html: yes
 ---
 
@@ -25,7 +25,7 @@ load('Data/synth_data_b.rdata') # outputted from 'Synth_data.R'
 load("Data/filtered_itsp.rdata")  # outputted from 'Synth_create_sps.R'
 load("Data/iterating_rm_countries_filt.rdata")
 source('R/Synth_functions.R')
-`-.gg` <- function(e1, e2) e2(e1)
+# `-.gg` <- function(e1, e2) e2(e1)
 ```
 
 

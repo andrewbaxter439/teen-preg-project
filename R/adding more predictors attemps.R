@@ -47,15 +47,15 @@ edu_spend <- edu_full %>%
   select(Country, Year = TIME, edu_spend = Value)
 
 newdata <- synthData_u20_filt %>% 
-  left_join(edu_spend, by = c("Country", "Year"))
+  left_join(edu_spend, by = c("Country", "Year")) %>% 
+  filter(Country != "Scotland")
 
-View(edu_full)
 
 # ** join with other data -------------------------------------------------
 
 
 
-# newdata <- synthData_u20_filt %>% left_join(edu_pred, by = c("Country", "Year")) %>% filter(Country!="Scotland", Country != "United States of America")
+# newdata <- synthData_u20_filt %>% left_join(edu_pred, by = c("Country", "Year")) %>% filter(Country!="Scotland")
 
 sp_u20_edu <- list(
   list("edu_spend", 1995:1998, "mean"),
@@ -65,7 +65,7 @@ sp_u20_edu <- list(
 
 newdata %>% 
   filter(Year < 1999) %>% 
-  ggplot(aes(Year, edu_spend_mean, col = Country)) +
+  ggplot(aes(Year, edu_spend, col = Country)) +
   geom_line() +
   geom_line(data = newdata %>% filter(Country == "England and Wales", Year < 1999), size = 2)
 
@@ -89,17 +89,13 @@ st_trial_synth2$tab.w
 
 # predictor 4 - mobile phone ownership ------------------------------------
 
-sd_noScot <- newdata %>% filter(Country != "Scotland")
-cc_noScot <- u_20_ccodes_f %>% filter(Country != "Scotland")
-
-sd_plusScot <- newdata %>% 
-  filter(Country == "Scotland") %>%
-  select(Code, Country, Year, pRate, rate, MF_ratio, edu_spend) %>% 
-  right_join(newdata %>% 
-               select(Country, Year, GDPperCap, MobilePhones, UrbanPop) %>% 
-               filter(Country== "England and Wales") %>% 
-               mutate(Country = "Scotland")) %>% 
-  bind_rows(sd_noScot)
+sd_noScot <- newdata %>% 
+  filter(Country == "Iceland") %>% 
+  select(-edu_spend) %>% 
+  left_join(edu_pred %>% filter(Country == "Iceland") %>% select(Country, Year, edu_spend = edu_spend_mean), by = c("Country", "Year")) %>% 
+  bind_rows(newdata %>% filter(Country != "Iceland")) %>% 
+  select(-rate) %>% 
+  left_join(synthData_u18_filt %>% select(Country, Year, rate) %>% filter(Country!="Scotland"))
 
 # Iterating bits ----------------------------------------------------------
 
@@ -173,18 +169,25 @@ sp_u20_mob <- it_u20_mob$sPred[it_u20_mob['iteration']==1522][1][[1]]
 sp_u20_gdp <- it_u20_gdp$sPred[it_u20_gdp['iteration']==171][1][[1]]
 sp_u20_urb <- it_u20_urb$sPred[it_u20_urb['iteration']==2048][1][[1]]
 
+save(
+  sp_u20_edu,
+  sp_u20_mob,
+  sp_u20_gdp,
+  sp_u20_urb,
+  file = "Data/other_predictors.rdata"
+)
 
 # under 20 - all predictors -----------------------------------------------
+load("Data/other_predictors.rdata")
 
-
-synthPrep(sd_plusScot %>% filter(Country!="Iceland"),
+synthPrep(sd_noScot,
           "u20_all",
           dependent = "pRate",
-          special.predictors = append(sp_u20_gdp, sp_u20_mob) %>% 
-            append(sp_u20_urb) %>% 
-            append(sp_u20_filt) %>% 
+          # special.predictors = sp_u20_filt,
+          special.predictors = append(sp_u20_filt, sp_u20_mob) %>% append(sp_u20_gdp) %>%
+            append(sp_u20_urb) %>%
             append(sp_u20_edu),
-          time.optimise.ssr = 1990:1998,
+          time.optimise.ssr = 1996:1998,
           time.plot = 1990:2013,
           time.predictors.prior = 1990:1998
 )
@@ -196,19 +199,14 @@ st_u20_all$tab.v
 
 # Under-18s - all predictors ----------------------------------------------
 
-
-newdata_u18 <- synthData_u18_filt %>% 
-  select(-GDPperCap, -MF_ratio, -UrbanPop, -MobilePhones) %>% 
-  left_join(sd_plusScot %>% select(Country, Year, MF_ratio, UrbanPop, MobilePhones, edu_spend, GDPperCap))
-
-synthPrep(newdata_u18 %>% filter(Country!="Iceland"),
+synthPrep(sd_noScot,
           "u18_all",
           dependent = "rate",
           special.predictors = append(sp_u20_gdp, sp_u20_mob) %>% 
             append(sp_u20_urb) %>% 
             append(sp_u18_filt) %>% 
             append(sp_u20_edu),
-          time.optimise.ssr = 1990:1998,
+          time.optimise.ssr = 1996:1998,
           time.plot = 1990:2013,
           time.predictors.prior = 1990:1998
 )
@@ -217,3 +215,9 @@ gg_synth(md = md_u18_all) + xlim(1990, 2013)
 st_u18_all$tab.w
 st_u18_all$tab.v
 
+ccodes_ns <- sd_noScot %>% filter(Country != "Scotland") %>% 
+  select(Country, Code) %>% 
+  unique() %>% 
+  arrange(Code)
+
+# save(sd_noScot, ccodes_ns, file = "Data/noScot.rdata")

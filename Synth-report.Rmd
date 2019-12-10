@@ -399,7 +399,7 @@ st_u18_all$tab.pred %>% kable(caption = "Predictor balance between synthetic and
 ```
 
 ### Placebo testing by country and time
-```{r plot_u18_all_pb_nat}
+```{r plot_u18_all_pb_nat, include = FALSE}
 # gaps graph
 pb_plot <- 
 gg_gaps(md_u18_all, pl_u18_all %>% filter(Year>1989)) + 
@@ -408,7 +408,7 @@ gg_gaps(md_u18_all, pl_u18_all %>% filter(Year>1989)) +
 ggplotly(pb_plot)  # %>% 
 #  api_create(filename = "Plot 47")
 ```
-```{r pp_u18_all}
+```{r pp_u18_all, include = FALSE}
 
 pp_u18_all <- gg_pre_postMSPE(md_u18_all, pl_u18_all) + labs(title = "Post/pre-TPS mean squared prediction error")
 pp_u18_all
@@ -461,7 +461,7 @@ dp <- dataprep(
 }
 ```
 
-```{r u18_all_pb_time_graph}
+```{r u18_all_pb_time_graph, include = FALSE}
 # placebo graph
 tp_u18_all_plotly <- super_md_u18_all %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
@@ -520,7 +520,7 @@ st_u20_sp$tab.pred %>% kable(caption = "Predictor balance between synthetic and 
 ```
 
 ### Placebo testing by country and time
-```{r plot_u20_sp_pb_nat}
+```{r plot_u20_sp_pb_nat, include = FALSE}
 # gaps graph
 pb_plot <- 
 gg_gaps(md_u20_sp, pl_u20_sp) + 
@@ -529,7 +529,7 @@ gg_gaps(md_u20_sp, pl_u20_sp) +
 ggplotly(pb_plot)  #%>% 
 #  api_create(filename = "Plot 49")
 ```
-```{r pp_u20_sp}
+```{r pp_u20_sp, include = FALSE}
 
 pp_u20_sp <- gg_pre_postMSPE(md_u20_sp, pl_u20_sp) + labs(title = "Post/pre-TPS mean squared prediction error")
 pp_u20_sp
@@ -580,7 +580,7 @@ dp <- dataprep(
 }
 ```
 
-```{r u20_sp_pb_time_graph}
+```{r u20_sp_pb_time_graph, include = FALSE}
 # placebo graph
 tp_u20_sp_plotly <- super_md_u20_sp %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
@@ -639,7 +639,7 @@ st_u20_gdp$tab.pred %>% kable(caption = "Predictor balance between synthetic and
 ```
 
 ### Placebo testing by country and time
-```{r plot_u20_gdp_pb_nat}
+```{r plot_u20_gdp_pb_nat, include = FALSE}
 # gaps graph
 pb_plot <- 
 gg_gaps(md_u20_gdp, pl_u20_gdp) +
@@ -648,7 +648,7 @@ gg_gaps(md_u20_gdp, pl_u20_gdp) +
 ggplotly(pb_plot)  # %>% 
 #  api_create(filename = "Plot 51")
 ```
-```{r pp_u20_gdp}
+```{r pp_u20_gdp, include = FALSE}
 
 pp_u20_gdp <- gg_pre_postMSPE(md_u20_gdp, pl_u20_gdp) + labs(title = "Post/pre-TPS mean squared prediction error")
 pp_u20_gdp
@@ -701,7 +701,7 @@ dp <- dataprep(
 }
 ```
 
-```{r u20_gdp_pb_time_graph}
+```{r u20_gdp_pb_time_graph, include = FALSE}
 # placebo graph
 tp_u20_gdp_plotly <- super_md_u20_gdp %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
@@ -760,7 +760,7 @@ st_u20_all$tab.pred %>% kable(caption = "Predictor balance between synthetic and
 ```
 
 ### Placebo testing by country and time
-```{r plot_u20_all_pb_nat}
+```{r plot_u20_all_pb_nat, include = FALSE}
 # gaps graph
 pb_plot <- 
 gg_gaps(md_u20_all, pl_u20_all) + 
@@ -769,7 +769,7 @@ gg_gaps(md_u20_all, pl_u20_all) +
 ggplotly(pb_plot)  # %>% 
 #  api_create(filename = "Plot 53")
 ```
-```{r pp_u20_all}
+```{r pp_u20_all, include = FALSE}
 
 pp_u20_all <- gg_pre_postMSPE(md_u20_all, pl_u20_all) + labs(title = "Post/pre-TPS mean squared prediction error")
 pp_u20_all
@@ -821,7 +821,7 @@ dp <- dataprep(
 }
 ```
 
-```{r u20_all_pb_time_graph}
+```{r u20_all_pb_time_graph, include = FALSE}
 # placebo graph
 tp_u20_all_plotly <- super_md_u20_all %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +

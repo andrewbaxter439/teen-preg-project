@@ -105,6 +105,9 @@ allUKrates_u20 <-
   read_xlsx("Conception rates by age and country.xlsx", sheet = "Under 20")
 
 abortions <- read_csv("Downloaded data files/EHIG_abortions.csv", skip = 25)
+
+US_abortions <- read_csv("Downloaded data files/USA_u20_abortions.csv")
+
 abortions_tidy <- abortions %>% 
   filter(!is.na(VALUE),
          is.na(COUNTRY_GRP)) %>% 
@@ -115,14 +118,9 @@ abortions_tidy <- abortions %>%
                               ifelse(Code == "GBR", "GBR_NP", Code)))) %>% 
   left_join(ccodes_new, by = "Code") %>% 
   select(Code, Country, Year:agegrp) %>% 
-  semi_join(synthData, by = c("Code", "Country", "Year", "agegrp"))
+  semi_join(synthData, by = c("Code", "Country", "Year", "agegrp")) %>% 
+  bind_rows(US_abortions)
 
-# ab_missing <- abortions_tidy %>% 
-#   spread(Year, Abortions)
-# 
-# ab_missing <- ab_missing %>%
-#   mutate(nMissing = rowSums(is.na(ab_missing))) %>% 
-#   select(Country, nMissing)
 
 synth_data_plus_ab <- right_join(abortions_tidy, synthData, by = c("Code", "Country", "Year", "agegrp"))
 
@@ -155,19 +153,6 @@ synth_data_interp_ab <- synth_data_interp_ab %>%
   select(-pRate) %>% 
   left_join(Sco_rates, by = c("Country", "Year")) %>% 
   bind_rows(synth_data_interp_ab %>% filter(Country != "Scotland" | agegrp != "Under 20"))
-
-
-US_rates <- allUKrates_u20 %>% 
-  filter(Country == "U.S.A.") %>% 
-  gather("Year", "pRate", -1) %>% 
-  mutate(Year = as.numeric(Year),
-         Country = "United States of America")
-
-synth_data_interp_ab <- synth_data_interp_ab %>%
-  filter(Country == "United States of America", agegrp == "Under 20") %>% 
-  select(-pRate) %>% 
-  left_join(US_rates, by = c("Country", "Year")) %>% 
-  bind_rows(synth_data_interp_ab %>% filter(Country != "United States of America" | agegrp != "Under 20"))
 
 
 synth_data_interp_ab <- synth_data_interp_ab %>%
@@ -218,11 +203,13 @@ synthData_u20_filt <- synthData_u20 %>%
 
 u_18_ccodes_f <- synthData_u18_filt%>% 
   select(Country, Code) %>% 
-  unique()
+  unique() %>% 
+  arrange(Code)
 
 u_20_ccodes_f <- synthData_u20_filt %>% 
   select(Country, Code) %>% 
-  unique()
+  unique() %>% 
+  arrange(Code)
 
 save(synthData, synthData_u18_filt, synthData_u20_filt, u_18_ccodes_f, u_20_ccodes_f, file = "Data/synth_data_b.rdata")
 
@@ -283,3 +270,9 @@ save(
   u_20_ccodes,
   file = "Data/synth_data.rdata"
 )
+
+
+# excluding Scotland ------------------------------------------------------
+
+
+

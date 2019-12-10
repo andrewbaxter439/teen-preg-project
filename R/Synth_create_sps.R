@@ -122,8 +122,25 @@ it_u20_all <-  testSynthIterations(
   time.optimise = 1990:1998
 ) %>% arrange(groups, mspe)
 
+it_u18_ns <- testSynthIterations(
+  yrs = 1990:1998,
+  pred = "rate",
+  data = sd_noScot,
+  ccodes = u_20_ccodes_f %>% filter(Country!="Scotland"),
+  n=5,
+  time.optimise = 1990:1998
+) %>% arrange(groups, mspe)
 
-save(it_u18_rateSp, it_u18_gdp, it_u18_all, it_u20_sp, it_u20_gdp, it_u20_all,it_u18_sp_1990, it_u18_all_1990, it_u18_gdp_1990, file = "Data/iterations.rdata")
+it_u20_ns <- testSynthIterations(
+  yrs = 1990:1998,
+  pred = "pRate",
+  data = sd_noScot,
+  ccodes = u_20_ccodes_f %>% filter(Country!="Scotland"),
+  n=5,
+  time.optimise = 1990:1998
+) %>% arrange(groups, mspe)
+
+save(it_u18_rateSp, it_u18_gdp, it_u18_all, it_u20_sp, it_u20_gdp, it_u20_all, it_u18_sp_1990, it_u18_all_1990, it_u18_gdp_1990, it_u18_ns, it_u20_ns, file = "Data/iterations.rdata")
 
 
 # test iterations for best fits ------------------------------------------------------------------------------
@@ -164,6 +181,7 @@ it_u20_all %>%
   group_by(groups) %>% 
   top_n(3, -mspe)  
 
+
 sp_u18_rateSp <- it_u18_rateSp$sPred[it_u18_rateSp$iteration == 220][[1]]
 sp_u18_gdp <- it_u18_gdp$sPred[it_u18_gdp$iteration == 9][[1]]
 sp_u18_all <- it_u18_all$sPred[it_u18_all$iteration == 9][[1]]
@@ -195,14 +213,28 @@ it_u20_filt %>%
   group_by(groups) %>% 
   top_n(3, -mspe)
 
+it_u18_ns %>% 
+  group_by(groups) %>% 
+  top_n(3, -mspe)  
+
+it_u20_ns %>% 
+  group_by(groups) %>% 
+  top_n(3, -mspe)  
+
 sp_u18_filt <- it_u18_filt$sPred[it_u18_filt$iteration == 26][[1]]
 sp_u20_filt <- it_u20_filt$sPred[it_u20_filt$iteration == 69][[1]]
+sp_u18_ns <- it_u18_ns$sPred[it_u18_filt$iteration == 26][[1]]
+sp_u20_ns <- it_u20_ns$sPred[it_u20_filt$iteration == 69][[1]]
 
 save(
   it_u18_filt,
   it_u20_filt,
   sp_u18_filt,
   sp_u20_filt,
+  it_u18_ns,
+  it_u20_ns,
+  sp_u18_ns,
+  sp_u20_ns,
   file = "Data/filtered_itsp.rdata"
 )
 
@@ -231,9 +263,16 @@ file = "Data/placebos_country.rdata"
 pl_u18_filt  <- generatePlacebos(synthData_u18_filt[, 1:4], special.predictors = sp_u18_filt, time.optimize.ssr = 1990:1998, time.plot = 1990:2013,)
 pl_u20_filt  <- generatePlacebos(synthData_u20_filt[, 1:4], special.predictors = sp_u20_filt, time.optimize.ssr = 1990:1998, time.plot = 1990:2013, dependent = "pRate")
 
+
+pl_u18_ns  <- generatePlacebos(sd_noScot, special.predictors = sp_u18_filt, time.optimize.ssr = 1990:1998, time.plot = 1990:2013,)
+pl_u20_ns  <- generatePlacebos(sd_noScot, special.predictors = sp_u20_filt, time.optimize.ssr = 1990:1998, time.plot = 1990:2013, dependent = "pRate")
+
+
 save(
   pl_u18_filt,
   pl_u20_filt,
+  pl_u18_ns,
+  pl_u20_ns,
   file = "Data/placebo_country_b.rdata"
 )
 # Iterate through removing countries --------------------------------------

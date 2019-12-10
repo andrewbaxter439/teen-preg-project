@@ -115,6 +115,14 @@ Scot.births.ISD <- read_xls("Downloaded data files/mat_tp_table4.xls", range = "
 
 #** Applying correction through mean ratio diffs ------------------
 
+Scot.births.ISD %>% 
+  gather("cat", "value", 2:7) %>% 
+  separate(cat, c("agegrp", "cat"), sep = "_") %>% 
+  spread(cat, value) %>% 
+  mutate(agegrp = factor(agegrp),
+         Deliveries = as.numeric(del)) %>%
+  left_join(Scot.births.adj, by=c("Year", "agegrp"), suffix = c(".rec", ".est")) %>% 
+  group_by(agegrp) %>% 
   mutate(est_diff = Deliveries.est-Deliveries.rec,
          est_ratio = Deliveries.rec/Deliveries.est) %>%
   group_by(agegrp) %>% 
@@ -140,17 +148,18 @@ Scot.births.ISD %>%
          Deliveries = as.numeric(del)) %>%
   left_join(Scot.births.adj, by=c("Year", "agegrp"), suffix = c(".rec", ".est")) %>% 
   group_by(agegrp) %>% 
-  group_map(., ~ tibble(factor = summary(lm(Deliveries.rec ~  0 + Deliveries.est, data = .))[["coefficients"]][1],
-           Rsqr = summary(lm(Deliveries.rec ~ 0 + Deliveries.est, data = .))[["r.squared"]])
-    ) %>% 
+  group_modify(., ~ tibble(factor = summary(lm(Deliveries.rec ~  0 + Deliveries.est, data = .x))[["coefficients"]][1],
+           Rsqr = summary(lm(Deliveries.rec ~ 0 + Deliveries.est, data = .x))[["r.squared"]]),
+           keep = TRUE
+    ) %>%  # old-style of group_map - no longer works
   right_join(Scot.births.corr, by = "agegrp") %>% 
   mutate(Deliveries.corr2 = Deliveries.est*factor) %>% 
   assign("Scot.births.corr", ., envir = .GlobalEnv) %T>% 
-  print({ggplot(data = .,aes(Year)) +
+  {print(ggplot(data = .,aes(Year)) +
   geom_line(aes(y = Deliveries.rec, col = "Recorded deliveries")) +
   geom_line(aes(y = Deliveries.est, col = "Estimated deliveries")) +
   geom_line(aes(y = Deliveries.corr2, col = "Corrected deliveries")) +
-  facet_wrap(~agegrp)}) %>% 
+  facet_wrap(~agegrp))} %>% 
   head()
 
 #** Check R^2 of each calculation type ---------------
@@ -163,6 +172,7 @@ Scot.births.corr %>%
             Rsqr2b = (function(x, y) cor(x, y)^2)(Deliveries.rec, Deliveries.corr2))
 
 #** Sum births by age group ----------------------------- 
+## Using multiplication factor derived from lm
 
 sumScotBirths <- Scot.births.corr %>% 
   select(agegrp, factor) %>% 

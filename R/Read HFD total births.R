@@ -100,7 +100,7 @@ allpopsroot <- foreach(Code=unique(teenBirths$Code), .combine=rbind) %dopar% {
 
 # Method 2: apply
 
-allpopsroot <- lapply(unique(teenBirths$Code), readpop)
+# allpopsroot <- lapply(unique(teenBirths$Code), readpop)
 
 # Standardise Germany labels - combining east/west pre-1990---------------
 

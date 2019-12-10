@@ -142,6 +142,24 @@ all.UK.rates %>% filter(Country == "Scotland" |
       theme_sphsu_light()
   }
 
+all.UK.rates %>% filter(Country == "Scotland" |
+                          Country == "England" |
+                          Country == "Wales") %>%
+  gather("Year", "Value",-1) %>%
+  mutate(Category = ifelse(Year < 1999, 0,
+                           ifelse(Year < 2007, 1, 2)),
+         Year = as.numeric(Year)) %>%
+  group_by(Country, Category) %>% 
+    ggplot(aes(
+      x = Year,
+      y = Value,
+      col = Country,
+      fill = Country
+    )) +
+      geom_point() +
+      geom_line() +
+      theme_sphsu_light()
+
 # EngMod - England data in ITS with break at 1999 ------------------------------------------------------------
 
 
