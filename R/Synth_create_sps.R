@@ -245,10 +245,10 @@ save(
 pl_u18_rateSp  <- generatePlacebos(synthData_u18[, 1:4], special.predictors = sp_u18_rateSp, time.optimize.ssr = 1985:1998)
 pl_u18_sp_1990  <- generatePlacebos(synthData_u18[, 1:4], special.predictors = sp_u18_sp_1990, time.optimize.ssr = 1990:1998, time.plot = 1990:2013,)
 pl_u18_gdp     <- generatePlacebos(synthData_u18[,1:5] %>% filter(!Country %in% exclude_u18_gdp_1990), special.predictors = sp_u18_sp_1990, time.optimize.ssr = 1990:1998, time.plot = 1990:2013, predictors = "GDPperCap")
-pl_u18_all     <- generatePlacebos(synthData_u18 %>% filter(!Country %in% exclude_u18_all_1990) , special.predictors = ssp_u18_sp_1990,time.optimize.ssr = 1990:1998, time.plot = 1990:2013, predictors = c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"))
+# pl_u18_all     <- generatePlacebos(synthData_u18 %>% filter(!Country %in% exclude_u18_all_1990) , special.predictors = ssp_u18_sp_1990,time.optimize.ssr = 1990:1998, time.plot = 1990:2013, predictors = c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"))
 pl_u20_sp      <- generatePlacebos(synthData_u20[, 1:4], special.predictors = sp_u20_sp, time.optimize.ssr = 1990:1998, time.plot = 1990:2013, dependent = "pRate")
 pl_u20_gdp     <- generatePlacebos(synthData_u20[,c(1:4, 6)] %>% filter(!Country %in% exclude_u20_gdp), special.predictors = sp_u20_gdp, time.optimize.ssr = 1990:1998, time.plot = 1990:2013, dependent = "pRate", predictors = "GDPperCap")
-pl_u20_all     <- generatePlacebos(synthData_u20[,-5] %>% filter(!Country %in% exclude_u20_all), special.predictors = sp_u20_all, time.optimize.ssr = 1990:1998, time.plot = 1990:2013, dependent = "pRate", predictors = c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"))
+# pl_u20_all     <- generatePlacebos(synthData_u20[,-5] %>% filter(!Country %in% exclude_u20_all), special.predictors = sp_u20_all, time.optimize.ssr = 1990:1998, time.plot = 1990:2013, dependent = "pRate", predictors = c("GDPperCap", "MobilePhones", "UrbanPop", "MF_ratio"))
 
 save(
 pl_u18_rateSp,
@@ -267,12 +267,32 @@ pl_u20_filt  <- generatePlacebos(synthData_u20_filt[, 1:4], special.predictors =
 pl_u18_ns  <- generatePlacebos(sd_noScot, special.predictors = sp_u18_filt, time.optimize.ssr = 1990:1998, time.plot = 1990:2013,)
 pl_u20_ns  <- generatePlacebos(sd_noScot, special.predictors = sp_u20_filt, time.optimize.ssr = 1990:1998, time.plot = 1990:2013, dependent = "pRate")
 
+pl_u18_all     <- generatePlacebos(sd_noScot,
+                                   special.predictors = sp_u18_filt %>% 
+                                     append(sp_u20_gdp) %>% 
+                                     append(sp_u20_edu) %>% 
+                                     append(sp_u20_mob) %>% 
+                                     append(sp_u20_urb),
+                                   time.optimize.ssr = 1990:1998, 
+                                   time.plot = 1990:2013)
+
+pl_u20_all     <- generatePlacebos(sd_noScot,
+                                   special.predictors = sp_u20_filt %>% 
+                                     append(sp_u20_gdp) %>% 
+                                     append(sp_u20_edu) %>% 
+                                     append(sp_u20_mob) %>% 
+                                     append(sp_u20_urb),
+                                   time.optimize.ssr = 1990:1998, 
+                                   time.plot = 1990:2013,
+                                   dependent = "pRate")
 
 save(
   pl_u18_filt,
   pl_u20_filt,
   pl_u18_ns,
   pl_u20_ns,
+  pl_u18_all,
+  pl_u20_all,
   file = "Data/placebo_country_b.rdata"
 )
 # Iterate through removing countries --------------------------------------

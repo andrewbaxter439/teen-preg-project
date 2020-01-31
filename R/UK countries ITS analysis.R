@@ -27,7 +27,9 @@ testAutocorr <- function(model, data=NULL, max.lag = 10, time.points = 25) {
 constructCIRibbon <- function(newdata, model) {
   newdata <- newdata %>%
     mutate(Predict = predict(model, newdata = newdata))
-  mm <- model.matrix(as.formula(paste0("~ ", model$call$model[3])),
+  # mm <- model.matrix(model$call$model,
+  mm <- model.matrix(formula(str_remove(model$call$model[[2]], "Value ")),
+  # mm <- model.matrix(as.formula(paste0("~ ", model$call$model[3])),
                      data = newdata)
   vars <- mm %*% vcov(model) %*% t(mm)
   sds <- sqrt(diag(vars))
@@ -326,7 +328,7 @@ modScot99_p3 %>% update(correlation = corARMA(
 
 modScot99_null <- 
   gls(
-    Value ~ Time + England + Time_Eng + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng,
+    formula("Value ~ Time + England + Time_Eng + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng"),
     data = EngScotContro,
     correlation = NULL,
     method = "ML"

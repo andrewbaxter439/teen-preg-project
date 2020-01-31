@@ -548,8 +548,7 @@ ccodes <- data %>%
     treatment.identifier = ccodes$Code[ccodes$Country =="England and Wales"],
     controls.identifier = ccodes$Code[ccodes$Country !="England and Wales"],
     predictors = predictors,
-    special.predictors = special.predictors,
-    ...
+    special.predictors = special.predictors
   )
   
   so <- synth(dp, ...)

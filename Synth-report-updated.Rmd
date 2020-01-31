@@ -1,7 +1,7 @@
 ---
 title: "Synth reporting"
 author: "Andrew Baxter"
-date: "10/09/2019"
+date: "27/01/2019"
 output: 
   # pdf_document:
   #   fig_height: 5
@@ -183,7 +183,16 @@ gr_u18_sp <- gg_synth(md = md_u18_sp, post = TRUE)
 
 gr_u18_sp #+ labs(title = sPredText(dp_u18_sp))
 
-if (params$save_graphs){ggsave("graphs/Synth-u18-sp.svg", width = 200, height = 150, units = "mm")}
+if (params$save_graphs){
+  
+  ggsave("graphs/Synth-u18-sp.svg",
+         gr_u18_sp +
+           theme(title = element_text(size = 14),
+                 axis.title = element_text(size = 12)),
+         dpi = 400,
+         width = 200, height = 150, units = "mm")
+  
+  }
 
 ```
 
@@ -220,17 +229,17 @@ api_create(last_plot(), filename = "Plot 43")
 
 # gr_u18_sp + pb_plot_u18_sp + plot_layout(guides = "collect")
 # ((gr_u18_sp +
-#       theme(legend.position = "bottom", legend.text = element_text(size = 14)) + 
+#       theme(legend.position = "bottom", legend.text = element_text(size = 14)) +
 #       ggtitle("a) England and Wales vs Synthetic Control")) |
 #     pb_plot_u18_sp +
-#     ggtitle("b) Gaps between observed and control, plotted by country")) / 
-#     guide_area() + 
+#     ggtitle("b) Gaps between observed and control, plotted by country")) /
+#     guide_area() +
 #     plot_layout(guides = "collect", nrow = 2, heights = c(6, 1))
 # ggsave("graphs/Synth_u18_sp output.png", width = 300, height = 150, units = "mm", dpi = 500)
 
 ```
 
-```{r rank_u18, include=FALSE}
+```{r rank_u18}
 pp_u18_sp <- gg_pre_postMSPE(md_u18_sp, pl_u18_filt) + labs(title = "Post/pre-TPS mean squared prediction error")
 
 p18 <- ggplot_build(pp_u18_sp)
@@ -251,8 +260,18 @@ pp_u18_sp
 ```
 
 ```{r save_u18_pb_nat, include=FALSE}
-if (params$save_graphs){ggsave(plot = pp_u18_sp, "graphs/Synth-u18-sp-pp-ratio.svg", width = 200, height = 150, units = "mm")}
- if (params$save_graphs){ggsave(plot = pb_plot_u18_sp, "graphs/Synth-u18-sp-gaps.svg", width = 200, height = 150, units = "mm")}
+if (params$save_graphs){ggsave(
+  plot = pp_u18_sp +
+           theme(title = element_text(size = 14),
+                 axis.title = element_text(size = 12),
+                 legend.position = "none"),
+         dpi = 400, "graphs/Synth-u18-sp-pp-ratio.svg", width = 200, height = 150, units = "mm"
+  )}
+ if (params$save_graphs){ggsave(
+   plot = pb_plot_u18_sp +
+           theme(title = element_text(size = 14),
+                 axis.title = element_text(size = 12),
+                 legend.position = "none"),  dpi = 400, "graphs/Synth-u18-sp-gaps.svg", width = 200, height = 150, units = "mm")}
 ```
 
 ```{r u18_pb_time_graph, fig.show="animate",	interval = 1/20}
@@ -330,7 +349,7 @@ gr_u20_rates <- synthData_u20_filt %>%
 gr_u20_rates
 ```
 
-### England vs Synthetic Control
+4.27### England vs Synthetic Control
 ```{r u20_sp, include = FALSE}
 opt_y1 <- 1990
 # dataprep and synth
@@ -475,7 +494,7 @@ synthPrep(sd_noScot,
 Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(md_u18_ns, "under 18")$tot_diff` births (to an average population of `r rateDiff(md_u18_ns, "under 18")$mean_pop` women).
 
 ```{r md_u18_ns_graph}
-gr_u18_ns <- gg_synth(md = md_u18_ns, post = FALSE) + xlim(1990, 2013)
+gr_u18_ns <- gg_synth(md = md_u18_ns, post = TRUE) + xlim(1990, 2013)
 
 
 gr_u18_ns #+ labs(title = sPredText(dp_u18_ns))
@@ -500,7 +519,7 @@ st_u18_ns$tab.pred %>% kable(caption = "Predictor balance between synthetic and 
 
 ### Placebo testing by country and time
 
-```{r plot_u18_pb_ns, include = FALSE}
+```{r plot_u18_pb_ns}
 pb_plot_u18_ns <- 
   gg_gaps(md_u18_ns, pl_u18_ns) #+ 
   # theme(text = element_text(size = 12),
@@ -527,7 +546,7 @@ api_create(last_plot(), filename = "Gaps - U18 - Excl Scotland")
 # ggsave("graphs/Synth_u18_ns output.png", width = 300, height = 150, units = "mm", dpi = 500)
 
 ```
-```{r rank_u18_ns, include=FALSE}
+```{r rank_u18_ns}
 pp_u18_ns <- gg_pre_postMSPE(md_u18_ns, pl_u18_filt) + labs(title = "Post/pre-TPS mean squared prediction error")
 
 p18 <- ggplot_build(pp_u18_ns)
@@ -541,7 +560,7 @@ rank_u18 <- p18$plot$data %>%
 
 In placebo-country tests, England and Wales ranked `r rank_u18 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u18)` countries by pre/post-MSPE ratio.
 
-```{r pp_u18_ns, include = FALSE}
+```{r pp_u18_ns}
 
 pp_u18_ns
 
@@ -552,7 +571,7 @@ if (params$save_graphs){ggsave(plot = pp_u18_ns, "graphs/Synth-u18-ns-pp-ratio.s
  if (params$save_graphs){ggsave(plot = pb_plot_u18_ns, "graphs/Synth-u18-ns-gaps.svg", width = 200, height = 150, units = "mm")}
 ```
 
-```{r u18_pb_time_graph_ns, fig.show="animate",	interval = 1/20, include = FALSE}
+```{r u18_pb_time_graph_ns, fig.show="animate",	interval = 1/20}
 tp_u18_ns <- super_md_u18_ns %>% 
   ggplot(aes(Year, Rate, col = Group, linetype = Group, frame = IntYr)) +
   geom_segment(aes(x = IntYr-0.5, xend = IntYr-0.5, y = 0, yend = 20), linetype = "dotted", size = 1, col = "grey", alpha = 0.7) +
@@ -608,7 +627,7 @@ Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(
 
 ```{r md_u20_ns_graph}
 # graph
-gr_u20_ns <- gg_synth(md = md_u20_ns, post = FALSE) + xlim(1990, 2013) 
+gr_u20_ns <- gg_synth(md = md_u20_ns, post = TRUE) + xlim(1990, 2013) 
 
 
 gr_u20_ns# + labs(title = sPredText(dp_u20_ns))
@@ -630,7 +649,7 @@ st_u20_ns$tab.pred %>% kable(caption = "Predictor balance between synthetic and 
 
 
 ### Placebo testing by country and time
-```{r plot_u20_ns_pb_nat, include = FALSE}
+```{r plot_u20_ns_pb_nat}
 # gaps graph
 pb_plot_u20_ns <- 
 gg_gaps(md_u20_ns, pl_u20_ns)# + 
@@ -655,7 +674,7 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 #     plot_layout(guides = "collect", nrow = 2, heights = c(6, 1))
 # ggsave("graphs/Synth_u20_ns output.png", width = 300, height = 150, units = "mm", dpi = 500)
 ```
-```{r rank_u20_ns, include=FALSE}
+```{r rank_u20_ns}
 pp_u20_ns <- gg_pre_postMSPE(md_u20_ns, pl_u20_ns) + labs(title = "Post/pre-TPS mean squared prediction error")
 
 p20 <- ggplot_build(pp_u20_ns)
@@ -669,7 +688,7 @@ rank_u20 <- p20$plot$data %>%
 
 In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
 
-```{r pp_u20_ns, include = FALSE}
+```{r pp_u20_ns}
 
 pp_u20_ns
 
@@ -724,11 +743,12 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 
 ```{r u18_all, include = FALSE}
 
-opt_y1 <- 1996
+opt_y1 <- 1990
 synthPrep(sd_noScot,
           "u18_all",
           dependent = "rate",
-          special.predictors = append(sp_u18_filt, sp_u20_gdp) %>% 
+          special.predictors = sp_u18_filt %>% 
+            append(sp_u20_gdp) %>% 
             append(sp_u20_edu) %>% 
             append(sp_u20_mob) %>% 
             append(sp_u20_urb),
@@ -741,7 +761,7 @@ synthPrep(sd_noScot,
 
 ```{r md_u18_all_graph}
 # graph
-gr_u18_all <- gg_synth(md = md_u18_all, post = FALSE)  + xlim(1990, 2013)
+gr_u18_all <- gg_synth(md = md_u18_all, post = TRUE)  + xlim(1990, 2013)
 
 
 gr_u18_all #+ labs(title = sPredText(dp_u18_all))
@@ -763,6 +783,47 @@ st_u18_all$tab.v %>% kable(caption = "Predictor weights")
 st_u18_all$tab.pred %>% kable(caption = "Predictor balance between synthetic and treated units")
 ```
 
+### Placebo testing by country
+
+```{r plot_u18_pb_all}
+pb_plot_u18_all <- 
+  gg_gaps(md_u18_all, pl_u18_all) #+ 
+  # theme(text = element_text(size = 12),
+  #       title = element_text(size = 12)) +
+  # labs(title = "England vs Synthetic Control, no added predictors - country placebo")
+
+if (params$plotly_graphs == "plotly"){
+  ggplotly(pb_plot_u18_all)
+} else {
+pb_plot_u18_all
+}
+
+if (params$plotly_graphs == "plotly" & params$publish_plotly) {
+api_create(last_plot(), filename = "Gaps - U18 - Excl Scotland")
+}
+
+```
+
+```{r rank_u18_all}
+pp_u18_all <- gg_pre_postMSPE(md_u18_all, pl_u18_all) + labs(title = "Post/pre-TPS mean squared prediction error")
+
+p18 <- ggplot_build(pp_u18_all)
+
+rank_u18 <- p18$plot$data %>% 
+  arrange(desc(ratio)) %>% 
+  ungroup() %>% 
+  mutate(rank = rank(-ratio)) %>% 
+  select(Country, ratio, rank)
+```
+
+In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
+
+```{r pp_u18_all}
+
+pp_u18_all
+
+```
+
 ## Model 6: Under-20 pregnancy rates
 
 ### England vs Synthetic Control
@@ -772,9 +833,10 @@ opt_y1 <- 1996
 synthPrep(sd_noScot,
           "u20_all",
           dependent = "pRate",
-          special.predictors = append(sp_u20_filt, sp_u20_gdp) %>% 
-            append(sp_u20_edu) %>% 
+          special.predictors = sp_u20_filt %>% 
             append(sp_u20_mob) %>% 
+            append(sp_u20_edu) %>% 
+            append(sp_u20_gdp) %>% 
             append(sp_u20_urb),
           time.optimise.ssr = 1996:1998,
           time.plot = 1990:2013,
