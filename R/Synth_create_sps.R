@@ -1,5 +1,6 @@
 source("R/Synth_functions.R")
-source("R/Synth_data.R")
+load('Data/synth_data_c.rdata')
+# source("R/Synth_data.R")
 # Special predictors iterations ------------------------------------------------------------------------------
 
 

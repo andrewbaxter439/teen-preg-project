@@ -9,55 +9,11 @@ library(purrr)
 
 # ** Data outside Europe -------------------------------------------------------------------------------------
 
-altpops <- read_xlsx("Downloaded data files/population_total.xlsx")
-pop_perc <- read_xlsx("Downloaded data files/pop_female_perc.xlsx")
 GDP_NZ <- read_xlsx("Downloaded data files/GDPdata.xlsx", sheet = "Data", skip = 3) %>% 
   filter(`Country Name` == "New Zealand") %>% 
   select(Country = `Country Name`, `1985`:`2017`) %>% 
   gather("Year", "GDPperCap", -1) %>% 
   mutate(Year = as.numeric(Year))
-
-GDP_lith <- read_csv("Downloaded data files/Lith-1990-1999-gdp.csv")
-
-hung_mod <- read_xlsx("Downloaded data files/GDPdata.xlsx", sheet = "Data", skip = 3) %>% 
-  filter(`Country Name` == "Hungary") %>% 
-  select(Country = `Country Name`, `1991`:`1995`) %>% 
-  gather("Year", "GDPperCap", -1) %>% 
-  lm(GDPperCap ~ as.numeric(Year), data = .)
-
-# **** New Zealand ----------------------------
-NZ_import_rates <- read_csv("Downloaded data files/NZ_totalpregrates.csv", skip=2, col_names=c("Year", "Under 15", "Under 20"))[1:26,]
-
-totpop_NZ <- altpops %>%
-  filter(country == "New Zealand") %>% 
-  select(Country = country, `1990`:`2017`) %>% 
-  gather("Year", "totpop", -1)
-
-u_20_pop <- pop_perc %>% filter(country == "New Zealand") %>% select(Country = country, `1990`:`2017`) %>%
-  gather("Year", "pop_perc", -1) %>%
-  mutate(pop_perc = ifelse(is.na(.$pop_perc), mean(pop_perc, na.rm = TRUE), pop_perc)) %>%
-  left_join(totpop_NZ, by = c("Country", "Year")) %>%
-  mutate(sumPops = totpop * pop_perc / 100, agegrp = "Under 20") %>%
-  select(Country, Year, agegrp, sumPops)
-
-nz_est_1990_01 <- NZ_import_rates %>% 
-  filter(Year < 1994) %>% 
-  select(Year, totalPregs = `Under 20`) %>% 
-  mutate(Year = c("1990", "1991"),
-         Country = "New Zealand",
-         agegrp = "Under 20") %>% 
-  left_join(u_20_pop, by = c("Country", "Year", "agegrp"))
-
-NZ_totalrates <- NZ_import_rates %>%
-  select(Year, `Under 20`) %>% 
-  gather("agegrp", "totalPregs", -1) %>% 
-  left_join(u_20_pop, by = c("Year", "agegrp")) %>% 
-    bind_rows(nz_est_1990_01) %>% 
-  mutate(pRate = 1000*totalPregs/sumPops,
-         Year = as.numeric(Year),
-         Code = "NZL") %>% 
-  left_join(GDP_NZ) %>% 
-  arrange(Year)
 
 # ** Under-18 data -------------------------------------------------------------------------------------------
 

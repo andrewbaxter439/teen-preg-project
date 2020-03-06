@@ -89,9 +89,9 @@ readpop <- function(code) {
 
 # Method 1: parallel cores
 
-cores <- detectCores()
-cl <- makeCluster(cores[1]-1) #not to overload your computer
-registerDoParallel(cl)
+# cores <- detectCores()
+# cl <- makeCluster(cores[1]-1) #not to overload your computer
+# registerDoParallel(cl)
 registerDoSEQ()
 
 allpopsroot <- foreach(Code=unique(teenBirths$Code), .combine=rbind) %dopar% {

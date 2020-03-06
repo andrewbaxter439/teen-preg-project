@@ -63,11 +63,12 @@ library(gganimate)
 library(ggrepel)
 library(patchwork)
 
-load('Data/synth_data_b.rdata') # outputted from 'Synth_data.R'
+load('Data/synth_data_c.rdata') # outputted from 'Synth_data.R'
+# load('Data/synth_data_b.rdata') # outputted from 'Synth_data.R'
 load("Data/filtered_itsp.rdata")  # outputted from 'Synth_create_sps.R'
 load("Data/placebo_country_b.rdata")  # outputted from 'Synth_create_sps.R'
 load("Data/time_placebos_b.rdata")  # outputted from 'Synth_time_pbs.R'
-load('Data/noScot.rdata')
+# load('Data/noScot.rdata')
 load("Data/other_predictors.rdata")
 source('R/Synth_functions.R')
 ```
@@ -165,7 +166,7 @@ gr_u18_rates
 ### England vs Synthetic Control
 ```{r md_u18_sp, include = FALSE}
 opt_y1 <- 1990
-synthPrep(synthData_u18_filt[,1:4],
+synthPrep(synthData_u18_filt,
           grp = "u18_sp",
           dependent = "rate",
           special.predictors = sp_u18_filt,
@@ -349,7 +350,7 @@ gr_u20_rates <- synthData_u20_filt %>%
 gr_u20_rates
 ```
 
-4.27### England vs Synthetic Control
+### England vs Synthetic Control
 ```{r u20_sp, include = FALSE}
 opt_y1 <- 1990
 # dataprep and synth
@@ -499,7 +500,7 @@ gr_u18_ns <- gg_synth(md = md_u18_ns, post = TRUE) + xlim(1990, 2013)
 
 gr_u18_ns #+ labs(title = sPredText(dp_u18_ns))
 
-if (params$save_graphs){ggsave("graphs/Synth-u18-ns.svg", width = 200, height = 150, units = "mm")}
+if (params$save_graphs){ggsave("graphs/Synth-u18-ns.svg", gr_u18_ns, width = 200, height = 150, units = "mm")}
 
 ```
 
@@ -611,7 +612,7 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 
 ### England vs Synthetic Control
 ```{r u20_ns, include = FALSE}
-opt_y1 <- 1996
+opt_y1 <- 1990
 # dataprep and synth
 synthPrep(sd_noScot,
           "u20_ns",
@@ -631,7 +632,7 @@ gr_u20_ns <- gg_synth(md = md_u20_ns, post = TRUE) + xlim(1990, 2013)
 
 
 gr_u20_ns# + labs(title = sPredText(dp_u20_ns))
- if (params$save_graphs){ggsave("graphs/Synth-u20-sp.svg", width = 200, height = 150, units = "mm")}
+ if (params$save_graphs){ggsave("graphs/Synth-u20-sp.svg", gr_u20_ns, width = 200, height = 150, units = "mm")}
 ```
 
 Loss-V (For optimised period) = `r signif(so_u20_ns$loss.v[[1]], 3)`, MSPE (for whole pre-intervention observation period) = `r pre_MSPE(md_u20_ns)`.
@@ -744,7 +745,7 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 ```{r u18_all, include = FALSE}
 
 opt_y1 <- 1990
-synthPrep(sd_noScot,
+synthPrep(sd_noScot %>% filter(Country != "New Zealand"),
           "u18_all",
           dependent = "rate",
           special.predictors = sp_u18_filt %>% 
@@ -829,8 +830,8 @@ pp_u18_all
 ### England vs Synthetic Control
 
 ```{r u20_all, include=FALSE}
-opt_y1 <- 1996
-synthPrep(sd_noScot,
+opt_y1 <- 1990
+synthPrep(sd_noScot %>% filter(Country != "New Zealand"),
           "u20_all",
           dependent = "pRate",
           special.predictors = sp_u20_filt %>% 

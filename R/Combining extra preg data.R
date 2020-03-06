@@ -65,15 +65,34 @@ Ausprerates <- tibble(Year=c(1985:2003),
                       rate = c(22.8,21.8,20.6,20.3,20.6,22.1,22.1,22.0,20.9,20.7,20.4,20.1,19.8,18.9,18.5,17.7,17.7,17.4,16.3))
 
 
+# NZ pop from HMD ---------------------------------------------------------
+
+NZ_pop <- readpop("NZL_NP")
+
+sumNZ_pop <- NZ_pop %>% merge(popAgeGrps) %>%
+  group_by(Code, Year, agegrp) %>%
+  summarise(sumPops = sum(Female)) %>% 
+  ungroup() %>% 
+  mutate(Code = "NZL")
+
+New_NZ_pop <- sumNZ_pop %>% 
+  filter(agegrp == 'Under 20',
+         Year > 1989) %>% 
+  right_join(U_20_pop %>% mutate(Year = as.numeric(Year)), by = c("Year", "agegrp")) %>% 
+  mutate(Code = "NZL")
+
 
 # New Zealand - abortions, stillbirths and livebirths combined ----------------------------------
 
+
+# ** under 20 pregnancies -------------------------------------------------
+
 NZ_import_rates <- read_csv("Downloaded data files/NZ_totalpregrates.csv", skip=2, col_names=c("Year", "Under 15", "Under 20"))[1:26,]
 
-totpop_NZ <- altpops %>% filter(country == "New Zealand") %>% select(Country = country, `1992`:`2017`) %>% 
+totpop_NZ <- altpops %>% filter(country == "New Zealand") %>% select(Country = country, `1990`:`2017`) %>% 
   gather("Year", "totpop", -1)
 
-U_20_pop <- pop_perc %>% filter(country == "New Zealand") %>% select(Country = country, `1992`:`2017`) %>% 
+U_20_pop <- pop_perc %>% filter(country == "New Zealand") %>% select(Country = country, `1990`:`2017`) %>% 
   gather("Year", "pop_perc", -1) %>% 
   mutate(pop_perc = ifelse(is.na(.$pop_perc), mean(pop_perc, na.rm = TRUE), pop_perc)) %>% 
   left_join(totpop_NZ, by = c("Country", "Year")) %>% 
@@ -88,3 +107,71 @@ NZ_totalrates <- NZ_import_rates %>%
          Year = as.numeric(Year),
          Code = "NZL")
   
+
+NZ_import_births <- read_csv("Downloaded data files/NZ_births_age.csv", 
+                             skip = 1) %>% rename(Year = X1)
+
+NZ_import_abo <- read_csv("Downloaded data files/NZ_abortions_agegrp.csv", 
+                          skip = 1) %>% rename(Year = X1)
+
+NZ_synth_rates <- NZ_import_births %>% 
+  select(-`20 years`) %>% 
+  pivot_longer(cols = -1, names_to = "agegrp", values_to = "births") %>% 
+  group_by(Year) %>% 
+  dplyr::summarise(births = sum(births)) %>% 
+  filter(!is.na(births),
+         Year >1989) %>% 
+  left_join(
+    NZ_import_abo %>% 
+      select(Year, abortions = `15 - 19 years`) %>% 
+      filter(Year > 1989),
+    by = "Year"
+  ) %>%
+  mutate(Year = as.numeric(Year)) %>% 
+  left_join(
+    New_NZ_pop, by = "Year"
+  ) %>% 
+  filter(Year<2014) %>% 
+  mutate(sumPops.x = zoo::na.approx(sumPops.x),
+           pRate = (births + abortions)/sumPops.x * 1000,
+         Code = 30,
+         agegrp = "Under 20") %>% 
+  select(Code, Country, Year, pRate)
+
+NZ_synth_rates %>% 
+  left_join(GDP_cap, by = c("Country", "Year"))
+
+# SD_import_u20 <- synthData_u20_filt
+synthData_u20_filt <- bind_rows(SD_import_u20, NZ_synth_rates)
+
+
+# ** Under-18 births ------------------------------------------------------
+
+NZ_under_18 <- NZ_import_births %>% 
+  select(-`19 years`, -`20 years`) %>% 
+  pivot_longer(cols = -1, names_to = "agegrp", values_to = "births") %>% 
+  group_by(Year) %>% 
+  summarise(births = sum(births)) %>% 
+  filter(!is.na(births),
+         Year >1989) %>% 
+  mutate(Year = as.numeric(Year)) %>% 
+  left_join(
+    sumNZ_pop %>% filter(agegrp == 'Under 18'), by = "Year"
+  ) %>% 
+  filter(Year<2014) %>% 
+  mutate(Code = 30,
+         agegrp = "Under 18", 
+         Country = "New Zealand",
+         sumPops = na.approx(sumPops),
+           rate = births/sumPops * 1000) %>% 
+  select(Code, Country, Year, rate)
+
+NZ_rates <- left_join(NZ_synth_rates, NZ_under_18 , by = c("Code", "Country", "Year"))
+
+# SD_u18_import <- synthData_u18_filt
+synthData_u18_filt <- bind_rows(SD_u18_import, NZ_under_18)
+
+SD_import <- sd_noScot %>% filter(Country != "New Zealand")
+sd_noScot <- bind_rows(SD_import, NZ_rates)
+
+save(synthData, synthData_u18_filt, synthData_u20_filt, u_18_ccodes_f, u_20_ccodes_f, sd_noScot, file = "Data/synth_data_c.rdata")
