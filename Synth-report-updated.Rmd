@@ -1,7 +1,7 @@
 ---
 title: "Synth reporting"
 author: "Andrew Baxter"
-date: "27/01/2019"
+date: "`r Sys.Date()`"
 output: 
   # pdf_document:
   #   fig_height: 5
@@ -18,7 +18,7 @@ output:
   # word_document:
   #   fig_height: 6
   #   fig_width: 8
-  #   reference_docx: report_template.docx
+  #   reference_docx: C:\Users\2286432b\OneDrive - University of Glasgow\Teenage pregnancy - docs in development\ITS and Synth paper files\Appendices.docx
 always_allow_html: yes
 params:
   save_graphs:
@@ -817,7 +817,7 @@ rank_u18 <- p18$plot$data %>%
   select(Country, ratio, rank)
 ```
 
-In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
+In placebo-country tests, England and Wales ranked `r rank_u18 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u18)` countries by pre/post-MSPE ratio.
 
 ```{r pp_u18_all}
 
@@ -839,7 +839,7 @@ synthPrep(sd_noScot %>% filter(Country != "New Zealand"),
             append(sp_u20_edu) %>% 
             append(sp_u20_gdp) %>% 
             append(sp_u20_urb),
-          time.optimise.ssr = 1996:1998,
+          time.optimise.ssr = opt_y1:1998,
           time.plot = 1990:2013,
           time.predictors.prior = 1990:1998
 )
@@ -847,7 +847,7 @@ synthPrep(sd_noScot %>% filter(Country != "New Zealand"),
 ```
 
 ```{r md_u20_all_graph}
-gr_u20_all <- gg_synth(md = md_u20_all, post = FALSE) + xlim(1990, 2013)
+gr_u20_all <- gg_synth(md = md_u20_all, post = TRUE) + xlim(1990, 2013)
 
 gr_u20_all
 ```
@@ -863,6 +863,47 @@ st_u20_all$tab.w %>% arrange(desc(w.weights)) %>% select(Country = unit.names, W
 st_u20_all$tab.v %>% kable(caption = "Predictor weights")
 
 st_u20_all$tab.pred %>% kable(caption = "Predictor balance between synthetic and treated units")
+```
+
+### Placebo testing by country
+
+```{r plot_u20_pb_all}
+pb_plot_u20_all <- 
+  gg_gaps(md_u20_all, pl_u20_all) #+ 
+  # theme(text = element_text(size = 12),
+  #       title = element_text(size = 12)) +
+  # labs(title = "England vs Synthetic Control, no added predictors - country placebo")
+
+if (params$plotly_graphs == "plotly"){
+  ggplotly(pb_plot_u20_all)
+} else {
+pb_plot_u20_all
+}
+
+if (params$plotly_graphs == "plotly" & params$publish_plotly) {
+api_create(last_plot(), filename = "Gaps - U20 - Excl Scotland")
+}
+
+```
+
+```{r rank_u20_all}
+pp_u20_all <- gg_pre_postMSPE(md_u20_all, pl_u20_all) + labs(title = "Post/pre-TPS mean squared prediction error")
+
+p20 <- ggplot_build(pp_u20_all)
+
+rank_u20 <- p20$plot$data %>% 
+  arrange(desc(ratio)) %>% 
+  ungroup() %>% 
+  mutate(rank = rank(-ratio)) %>% 
+  select(Country, ratio, rank)
+```
+
+In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
+
+```{r pp_u20_all}
+
+pp_u20_all
+
 ```
 
 <div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>

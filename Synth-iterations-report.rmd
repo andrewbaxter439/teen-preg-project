@@ -1,18 +1,18 @@
 ---
 title: "Model-testing iterations"
 author: "Andrew Baxter"
-date: "19/09/2019"
+date: "`r Sys.Date()`"
 output:
-  html_document
-  # word_document:
-  #   fig_height: 6
-  #   fig_width: 8
-  #   reference_docx: report_template.docx
+  # html_document
+  word_document:
+    fig_height: 6
+    fig_width: 8
+    reference_docx: C:\Users\2286432b\OneDrive - University of Glasgow\Teenage pregnancy - docs in development\ITS and Synth paper files\Appendices.docx
 always_allow_html: yes
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, error = FALSE, warning = FALSE, fig.width = 10, fig.height = 7)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, error = FALSE, warning = FALSE, fig.width = 10, fig.height = 6, dpi = 300)
 
 library(dplyr)
 library(svglite)
@@ -21,7 +21,7 @@ library(ggplot2)
 library(SPHSUgraphs)
 library(purrr)
 library(ggrepel)
-load('Data/synth_data_b.rdata') # outputted from 'Synth_data.R'
+load('Data/synth_data_c.rdata') # outputted from 'Synth_data.R'
 load("Data/filtered_itsp.rdata")  # outputted from 'Synth_create_sps.R'
 load("Data/iterating_rm_countries_filt.rdata")
 source('R/Synth_functions.R')
@@ -29,7 +29,7 @@ source('R/Synth_functions.R')
 ```
 
 
-# Under-18 pregnancy - no added predictors
+## Under-18 pregnancy - no added predictors
 
 Plotting MSPEs by iteration and gaps for all iterations.
 
@@ -38,7 +38,7 @@ gr_it_u18_filt <- plotIterations(it_u18_filt)  %>% annotate_figure(top = text_gr
 gr_it_u18_filt
 ```
 
-## Top countries
+### Top countries
 
 Differing iterations produced different country weightings. I exctracted the top country for each iteration and plotted the lowest MSPE for the top four countries:
 
@@ -47,32 +47,101 @@ gr_tops_u18_filt <- plotIterations(it_u18_filt, labels = TRUE)  %>% annotate_fig
 gr_tops_u18_filt
 ```
 
-## Removing top countries
+### Removing top countries
 
-A further iterative cycle constructed sequential synthetic controls, removing the previous top-weighted country to test for over-reliance on very few abnormal countries. Labels represent the top-weighted country in each analysis by weight and pre-itervention MSPE:
+A further iterative cycle constructed sequential synthetic controls, removing the previous top-weighted country to test for over-reliance on very few abnormal countries. Labels represent the top-weighted country in each analysis by weight and pre-intervention MSPE:
 
 ```{r itco_u18_sp}
 gr_itco_u18_filt <- gg_iterateCountries(itco_u18_filt, float_labs = TRUE)
 gr_itco_u18_filt
 ```
 
-# Under-20 - no added predictors
+<!-- ### Removing countries sequentially -->
+
+```{r it_u18_sing_plot, include = FALSE}
+df <- it_u18_all_sing %>% 
+  # mutate(top_w = map_chr(weights, ~ 
+  #          arrange(.x, desc(w.weights)) %>% 
+  #          head(1) %>% 
+  #            mutate(unit.names = as.character(unit.names)) %>% 
+  #          pull(unit.names)))
+  unnest(gaps) %>% 
+  mutate(mspe = signif(mspe, 2),
+         label = ifelse(Year == 2013, paste0(removed, " removed; MSPE = ", mspe), NA))
+
+df %>% 
+      ggplot(aes(Year, Gap)) + 
+    geom_line(size = 1, aes(col = removed)) + 
+    theme_minimal() +
+    theme(panel.grid = element_blank()) +
+    geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +
+    geom_segment(x = 1990, xend = 2013, y = 0, yend = 0, col = "black") +
+    scale_colour_sphsu(name = "Country removed") +
+    ylab("Gap = Treated - Synthetic Control") +
+      theme(legend.position = "none") +
+      coord_cartesian(clip = "off") +
+      geom_text_repel(aes(x = Year, y = Gap, label = label),
+                      hjust = 0,
+                      direction = "y",
+                      nudge_x = 0.8,
+                      xlim = c(NA, 2030)
+      ) +
+      theme(plot.margin = unit(c(0,10,0,0), "cm"))
+
+```
+
+
+## Under-20 - no added predictors
 
 ```{r it_u20_plots}
 gr_it_u20_filt <- plotIterations(it_u20_filt)  %>% annotate_figure(top = text_grob("Under-20, no predictors - year iterations"))
 gr_it_u20_filt
 ```
 
-## Top Countries
+### Top Countries
 
 ```{r it_u20_tops}
 gr_tops_u20_filt <- plotIterations(it_u20_filt, labels = TRUE)  %>% annotate_figure(top = text_grob("Under-20, no predictors - year iterations"))
 gr_tops_u20_filt
 ```
 
-## Removing Top Countries
+### Removing Top Countries
 
 ```{r itco_u20_filt}
 gr_itco_u20_filt <- gg_iterateCountries(itco_u20_filt, float_labs = TRUE)
 gr_itco_u20_filt
+```
+
+<!-- ### Removing countries sequentially -->
+
+```{r it_u20_sing_plot, include = FALSE}
+df <- it_u20_all_sing %>% 
+  # mutate(top_w = map_chr(weights, ~ 
+  #          arrange(.x, desc(w.weights)) %>% 
+  #          head(1) %>% 
+  #            mutate(unit.names = as.character(unit.names)) %>% 
+  #          pull(unit.names)))
+  unnest(gaps) %>% 
+  mutate(mspe = signif(mspe, 2),
+         label = ifelse(Year == 2013, paste0(removed, " removed; MSPE = ", mspe), NA))
+
+df %>% 
+      ggplot(aes(Year, Gap)) + 
+    geom_line(size = 1, aes(col = removed)) + 
+    theme_minimal() +
+    theme(panel.grid = element_blank()) +
+    geom_vline(xintercept = 1998.5, linetype = "dashed", col = "grey") +
+    geom_segment(x = 1990, xend = 2013, y = 0, yend = 0, col = "black") +
+    scale_colour_sphsu(name = "Country removed") +
+    ylab("Gap = Treated - Synthetic Control") +
+      theme(legend.position = "none") +
+      coord_cartesian(clip = "off") +
+      geom_text_repel(aes(x = Year, y = Gap, label = label),
+                      hjust = 0,
+                      direction = "y",
+                      nudge_x = 0.8,
+                      xlim = c(NA, 2030)
+      ) +
+      theme(plot.margin = unit(c(0,10,0,0), "cm"))
+
 ```

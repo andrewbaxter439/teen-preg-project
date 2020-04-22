@@ -301,7 +301,9 @@ save(
 
 
 iterateCountries <- function(data = synthData_u18[,1:4], ccodes = u_18_ccodes, n=4, start = 1985, pred = "rate", ...){
-cc <- ccodes
+require(dplyr)
+  require(Synth)
+  cc <- ccodes
 
 it_c <- list()
 
@@ -338,7 +340,7 @@ return(it_c)
 }
 
 
-itco_u18_sp <- iterateCountries(Margin.ipop=.005,Sigf.ipop=7,Bound.ipop=6)
+itco_u18_sp <- iterateCountries(Margin.ipop=.005,Sigf.ipop=7,Bound.ipop=6, ccodes = u_18_ccodes_f)
 
 itco_u18_sp_1990 <- iterateCountries(data = synthData_u18[,1:4], 
                                      ccodes = u_18_ccodes,
@@ -358,8 +360,76 @@ save(itco_u18_sp, itco_u18_sp_1990, itco_u20_sp, file = "Data/iterating_rm_count
 itco_u18_filt <- iterateCountries(synthData_u18_filt, u_18_ccodes_f, start = 1990, pred = "rate")
 itco_u20_filt <- iterateCountries(synthData_u20_filt, u_20_ccodes_f, start = 1990, pred = "pRate")
 
+
+
+# iterate remove and replace ----------------------------------------------
+
+
+iterate_singular <- function(data = synthData_u18_filt,
+                             ccodes = u_18_ccodes_f,
+                             predictors = NULL,
+                             dependent = "rate",
+                             spreds = sp_u18_filt) {
+  out <- tibble()
+  
+  for (i in ccodes$Code) {
+    if (ccodes$Country[ccodes$Code==i]=="England and Wales"){
+      next
+    } else {
+      
+      cc <- ccodes[ccodes$Code != i,]
+  
+  dp <- dataprep(
+    foo = data,
+    predictors = predictors,
+    special.predictors = spreds,
+    time.predictors.prior = 1990:1998,
+    dependent = dependent,
+    unit.variable = "Code",
+    unit.names.variable = "Country",
+    time.variable = "Year",
+    treatment.identifier = cc$Code[cc$Country =="England and Wales"],
+    controls.identifier = cc$Code[cc$Country !="England and Wales"],
+    time.optimize.ssr = 1990:1998,
+    time.plot = 1990:2013
+  )
+  
+  # md <- predvalues_synth(dp, synth_outputs = FALSE, ...)
+  
+  so <- synth(dp)
+  st <- synth.tab(so, dp)
+  
+  synthC <- dp$Y0 %*% so$solution.w
+  
+  md <- tibble(Year = as.numeric(rownames(dp$Y1)), Treated = dp$Y1[,1], Synthetic = synthC[,1]) %>% 
+    gather("Group", "Rate", -1)
+  
+  mspe <- so$loss.v[1,1]
+  
+  w <- st$tab.w
+  # v <- tibble(Pred = row.names(st$tab.v), v_weight = as.numeric(st$tab.v))
+  
+  gaps <- md %>%
+    spread(Group, Rate) %>% 
+    mutate(Gap = Treated - Synthetic)
+  
+out <- out %>% bind_rows(tibble(w_weights = list(w),
+         gaps = list(gaps),
+         mspe = mspe,
+         removed = ccodes$Country[ccodes$Code==i]))
+  
+    }
+  }
+  return(out)
+}
+
+it_u18_all_sing <- iterate_singular()
+it_u20_all_sing <- iterate_singular(data= synthData_u20_filt, spreds = sp_u20_filt, dependent = "pRate", ccodes = u_20_ccodes_f)
+
 save(
   itco_u18_filt,
   itco_u20_filt,
+  it_u18_all_sing,
+  it_u20_all_sing,
   file = "Data/iterating_rm_countries_filt.rdata"
 )
