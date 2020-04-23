@@ -1,13 +1,15 @@
 ---
 title: "Model-testing iterations"
 author: "Andrew Baxter"
-date: "`r Sys.Date()`"
+date: '`r Sys.Date()`'
 output:
-  # html_document
+  html_document:
+    df_print: paged
   word_document:
     fig_height: 6
     fig_width: 8
-    reference_docx: C:\Users\2286432b\OneDrive - University of Glasgow\Teenage pregnancy - docs in development\ITS and Synth paper files\Appendices.docx
+    reference_docx: Synth-report-updated.docx
+bibliography: synth_citation.bib
 always_allow_html: yes
 ---
 
@@ -56,9 +58,11 @@ gr_itco_u18_filt <- gg_iterateCountries(itco_u18_filt, float_labs = TRUE)
 gr_itco_u18_filt
 ```
 
-<!-- ### Removing countries sequentially -->
+### Removing countries sequentially
 
-```{r it_u18_sing_plot, include = FALSE}
+As a second approach, as suggested by Abadie, Diamond and Hainmueller [-@Abadie2010], we removed one country at a time to test for reliance on a particular country:
+
+```{r it_u18_sing_plot, include = TRUE}
 df <- it_u18_all_sing %>% 
   # mutate(top_w = map_chr(weights, ~ 
   #          arrange(.x, desc(w.weights)) %>% 
@@ -112,9 +116,9 @@ gr_itco_u20_filt <- gg_iterateCountries(itco_u20_filt, float_labs = TRUE)
 gr_itco_u20_filt
 ```
 
-<!-- ### Removing countries sequentially -->
+### Removing countries sequentially
 
-```{r it_u20_sing_plot, include = FALSE}
+```{r it_u20_sing_plot, include = TRUE}
 df <- it_u20_all_sing %>% 
   # mutate(top_w = map_chr(weights, ~ 
   #          arrange(.x, desc(w.weights)) %>% 
@@ -145,3 +149,5 @@ df %>%
       theme(plot.margin = unit(c(0,10,0,0), "cm"))
 
 ```
+
+# References
