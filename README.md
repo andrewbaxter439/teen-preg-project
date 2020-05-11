@@ -6,3 +6,13 @@
 # Project - Natural Experimental testing of teenage pregnancy rates and causes
 
 Code used in the project evaluating England's Teenage Pregnancy Strategy.
+
+## Data Sources
+
+ - [The Human Mortality Database](https://www.mortality.org/) (Requires registration; accessed 9 Apr 2019)
+ - [The Human Fertility Database](https://www.humanfertility.org/) (Requires registration; accessed 25 March 2019)
+ - [Statistics New Zealand](http://stats.govt.nz) (accessed 19 Feburary 2019) - tables VSB004AA and ABN005AA
+ - [World Bank Open Data](https://data.worldbank.org/) (accessed 23 April 2019)
+ - [European Health Information Gateway - Health for All Explorer](https://gateway.euro.who.int/en/hfa-explorer/) (accessed 9 September 2019)
+ - [Guttmacher Institute - Pregnancies, Births and Abortions Among Adolescents and Young Women in the United States, 2013](https://www.guttmacher.org/report/us-adolescent-pregnancy-trends-2013) (accessed 17 January 2019)
+ - [Public spending on education - OECD Data](https://data.oecd.org/eduresource/public-spending-on-education.htm) (accesed 21 October 2019)
