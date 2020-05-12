@@ -7,6 +7,10 @@
 
 Code used in the project evaluating England's Teenage Pregnancy Strategy.
 
+## Repeating analyses
+
+The file `Synth-iterations-report.rmd` will produce outputs for Synthetic Control analyses. The Interrupted Time Series analyses can be reproduced [here](https://andybaxter.shinyapps.io/teen_preg_uk_its/) using a Shiny app (repo for Shiny app [here](https://github.com/andrewbaxter439/ITS_shinyapp))
+
 ## Data Sources
 
  - [The Human Mortality Database](https://www.mortality.org/) (Requires registration; accessed 9 Apr 2019)
