@@ -99,10 +99,6 @@ Abortion estimates were added to give Under-20 rates:
 kable(head(synthData_u20_filt %>% mutate_if(is.numeric, ~ round(.,2))))
 ```
 
-## Removing non-fitting countries
-
-Several countries were removed (detail added later).
-
 # Iterating through year combinations
 
 For each comparison, I iterated through all combinations of years as special predictors to minimise MSPE (whilst prioritising fewest groupings). For example, for the under-18 basic model with years as special predictors:
@@ -353,11 +349,15 @@ gr_u20_rates
 ### England vs Synthetic Control
 ```{r u20_sp, include = FALSE}
 opt_y1 <- 1990
+synthData_u20_filt[synthData_u20_filt$Country=="New Zealand","rate"] <- 
+  synthData_u18_filt[synthData_u18_filt$Country=="New Zealand","rate"]
+
 # dataprep and synth
-synthPrep(synthData_u20_filt[,1:4],
+synthPrep(synthData_u20_filt[,1:5],
           "u20_sp",
           dependent = "pRate",
           special.predictors = sp_u20_filt,
+          # special.predictors = append(sp_u20_filt, sp_u18_filt),
           time.optimise.ssr = opt_y1:1998,
           time.predictors.prior = opt_y1:1998,
           time.plot = opt_y1:2013
@@ -485,6 +485,7 @@ opt_y1 <- 1990
 synthPrep(sd_noScot,
           grp = "u18_ns",
           dependent = "rate",
+          # special.predictors = append(sp_u18_filt, sp_u20_filt),
           special.predictors = sp_u18_filt,
           time.optimise.ssr = opt_y1:1998,
           time.predictors.prior = 1990:1998,
@@ -749,6 +750,7 @@ synthPrep(sd_noScot %>% filter(Country != "New Zealand"),
           "u18_all",
           dependent = "rate",
           special.predictors = sp_u18_filt %>% 
+            append(sp_u20_filt) %>% 
             append(sp_u20_gdp) %>% 
             append(sp_u20_edu) %>% 
             append(sp_u20_mob) %>% 
@@ -835,6 +837,7 @@ synthPrep(sd_noScot %>% filter(Country != "New Zealand"),
           "u20_all",
           dependent = "pRate",
           special.predictors = sp_u20_filt %>% 
+            # append(sp_u18_filt) %>% 
             append(sp_u20_mob) %>% 
             append(sp_u20_edu) %>% 
             append(sp_u20_gdp) %>% 
