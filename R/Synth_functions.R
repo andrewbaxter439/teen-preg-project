@@ -514,6 +514,7 @@ synthPrep <- function(data,
                       time.plot = NULL,
                       predictors = NULL,
                       special.predictors = NULL,
+                      assign_global = TRUE,
                       ...){
   
   start <- min(data$Year)  
@@ -561,13 +562,15 @@ synthPrep <- function(data,
   md <- tibble(Year = as.numeric(rownames(dp$Y1)), Treated = dp$Y1[,1], Synthetic = synthC[,1]) %>% 
     gather("Group", "Rate", -1)
   
-  
+  if (assign_global) {
   assign(paste0("dp_", grp), dp, envir = .GlobalEnv)
   assign(paste0("so_", grp), so, envir = .GlobalEnv)
   assign(paste0("st_", grp), st, envir = .GlobalEnv)
   assign(paste0("md_", grp), md, envir = .GlobalEnv)
   assign(paste0("mspe_limit_", grp), mspe_lim, envir = .GlobalEnv)
+  }
   
+  return(md)
 }
 
 

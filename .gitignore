@@ -17,3 +17,4 @@ style.css
 sample code for synth.txt
 *.docx
 *[old]*
+!select_synth.Rmd

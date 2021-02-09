@@ -1,0 +1,122 @@
+---
+title: "Re-running Synth"
+author: "Andy Baxter"
+date: "09/02/2021"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(tidyverse)
+library(stringr)
+library(broom)
+library(magrittr)
+library(Synth)
+library(Rcpp)
+library(purrr)
+library(svglite)
+library(SPHSUgraphs)
+library(plotly)
+library(knitr)
+library(gganimate)
+library(ggrepel)
+library(patchwork)
+
+load('Data/synth_data_c.rdata') # outputted from 'Synth_data.R'
+# load('Data/synth_data_b.rdata') # outputted from 'Synth_data.R'
+load("Data/filtered_itsp.rdata")  # outputted from 'Synth_create_sps.R'
+load("Data/placebo_country_b.rdata")  # outputted from 'Synth_create_sps.R'
+load("Data/time_placebos_b.rdata")  # outputted from 'Synth_time_pbs.R'
+# load('Data/noScot.rdata')
+load("Data/other_predictors.rdata")
+source('R/Synth_functions.R')
+```
+
+```{r synth_graph, echo = FALSE, eval = FALSE}
+
+countries <- unique(synthData_u18_filt %>% 
+                      filter(Country!="England and Wales") %>% 
+                      pull(Country))
+
+shinyApp(
+  
+  ui = fluidPage(
+    fluidRow(
+      selectizeInput("countries", 
+                     "Select countries to include in control",
+                     choices = countries, 
+                     selected = countries, 
+                     multiple = TRUE)
+    ),
+    fluidRow(
+      plotOutput("synth_graph")
+    )
+  ),
+  
+  
+  server = function(input, output, session) {
+    opt_y1 <- 1990
+    md <- reactive({
+      synthPrep(
+        as.data.frame(synthData_u18_filt %>% 
+                        filter(Country %in% c("England and Wales", input$countries))), 
+        assign_global = FALSE,
+        grp = "u18_sp",
+        dependent = "rate",
+        special.predictors = sp_u18_filt,
+        time.optimise.ssr = opt_y1:1998,
+        time.predictors.prior = opt_y1:1998,
+        time.plot = opt_y1:2013
+      )
+    })
+    
+    output$synth_graph <- renderPlot(gg_synth(md = md(), post = TRUE))
+  }
+)
+
+```
+
+
+```{r synth_graph_bits, echo = FALSE}
+
+countries <- unique(synthData_u18_filt %>% 
+                      filter(Country!="England and Wales") %>% 
+                      pull(Country))
+opt_y1 <- 1990
+
+# inputPanel(
+  selectizeInput("countries", 
+                 "Select countries to include in control",
+                 choices = countries, 
+                 selected = countries, 
+                 multiple = TRUE,
+                 width = '500px')
+  
+  checkboxInput("post", "Show post-period", value = TRUE)
+         
+# )
+renderPlotly({
+  
+  md <- synthPrep(
+    as.data.frame(synthData_u18_filt %>% 
+                    filter(Country %in% c("England and Wales", input$countries))), 
+    assign_global = FALSE,
+    grp = "u18_sp",
+    dependent = "rate",
+    special.predictors = sp_u18_filt,
+    time.optimise.ssr = opt_y1:1998,
+    time.predictors.prior = opt_y1:1998,
+    time.plot = opt_y1:2013
+  )
+  
+  plot <- gg_synth(
+    md = md,
+    post = input$post)
+  
+  plot <- plot + theme(text = element_text(size = 12))
+  
+  ggplotly(plot)
+})
+```
