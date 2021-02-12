@@ -2,7 +2,11 @@
 title: "Re-running Synth"
 author: "Andy Baxter"
 date: "09/02/2021"
-output: html_document
+output: 
+  html_document:
+    theme:
+      version: 4
+      bootswatch: minty
 runtime: shiny
 ---
 
@@ -87,14 +91,19 @@ countries <- unique(synthData_u18_filt %>%
 opt_y1 <- 1990
 
 # inputPanel(
+fluidRow(
+  
   selectizeInput("countries", 
                  "Select countries to include in control",
                  choices = countries, 
                  selected = countries, 
                  multiple = TRUE,
-                 width = '500px')
-  
+                 width = '100%',
+                 options = list(
+                   'plugins' = list('remove_button')
+                 )),
   checkboxInput("post", "Show post-period", value = TRUE)
+)
          
 # )
 renderPlotly({

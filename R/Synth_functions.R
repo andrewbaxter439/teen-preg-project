@@ -51,8 +51,10 @@ gg_synth <- function(dp = NULL, md = NULL, yr = 1999, post = FALSE, mspe = NULL,
     theme_sphsu_light() +
     ylab(paste0("Under-", agegrp, " rate (per 1,000 women)")) +
     theme(legend.title = element_blank(),
-          panel.grid = element_blank(),
-          line = element_blank()) +
+          panel.grid.major = element_line(colour = "#e0e0e0"),
+          panel.grid.minor = element_blank(),
+          # line = element_blank()
+          ) +
     # scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +  # no linetype change
     scale_colour_manual(name = "Data", 
                         breaks = c("Treated", "Synthetic"),
@@ -218,6 +220,13 @@ gg_gaps <- function(md, pl, dp = NULL, mspe_limit = NULL, title = FALSE, subtitl
     theme(panel.grid = element_blank()) +
     geom_vline(xintercept = 1998.5, linetype = "dotted") +
     ylab("Gap = Treated - Synthetic Control")
+  
+  pl %>% 
+    filter(pre_mspe > 5*mspe_limit) %>% 
+    pull(Country) %>% 
+    unique() %>% 
+    paste(collapse = ", ") %>% 
+    cat("Countries removed:", .)
   
   if(title){
     p <- p + labs(title = sPredText(dp_u20_sp))
@@ -720,7 +729,8 @@ plotIterations <- function(iteration = it_u18_rateSp, labels = FALSE) {
 
 gg_pre_postMSPE <- function(md, pl){
   
-  p <-  md %>% 
+    
+    df <- md %>% 
     spread(Group, Rate) %>% 
     mutate(Gap = Treated - Synthetic,
            Country = "England and Wales") %>% 
@@ -732,8 +742,16 @@ gg_pre_postMSPE <- function(md, pl){
     spread(period, mspe) %>% 
     mutate(ratio = post/pre,
            label = ifelse(Country=="England and Wales", paste0("England and Wales; ratio = ", signif(ratio, 3)), NA),
-           xintercept = ifelse(Country=="England and Wales", ratio, NA)) %>% 
-    ggplot(aes(ratio)) +
+           xintercept = ifelse(Country=="England and Wales", ratio, NA))
+    
+  df %>% 
+    select(Country, ratio) %>% 
+    arrange(ratio) %>% 
+    ungroup() %>% 
+    mutate(rank = row_number()) %>% 
+    print()
+    
+  p <-  ggplot(df, aes(ratio)) +
     geom_histogram(fill = sphsu_cols("Cobalt"), col = "darkgrey", bins = 60) +
     theme_minimal() + 
     theme(panel.grid = element_blank())

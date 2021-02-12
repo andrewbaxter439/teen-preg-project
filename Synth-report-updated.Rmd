@@ -16,13 +16,13 @@ output:
     toc_float:
       collapsed: false
   # word_document:
-  #   fig_height: 6
-  #   fig_width: 8
-  #   reference_docx: C:\Users\2286432b\OneDrive - University of Glasgow\Teenage pregnancy - docs in development\ITS and Synth paper files\Appendices.docx
+  #   fig_height: 4.7
+  #   fig_width: 6.1
+  #   reference_docx: C:\Users\2286432b\OneDrive - University of Glasgow\Teenage pregnancy - docs in development\ITS and Synth paper files\BMJ Submission documents\Supplementary File.docx
 always_allow_html: yes
 params:
   save_graphs:
-    label: "Save graphs (as svg):"
+    label: "Save graphs (as png):"
     value: FALSE
   plotly_graphs:
     label: "Display graphs as plotly (not available in .docx):"
@@ -38,14 +38,14 @@ header-includes:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-	echo = FALSE,
-	error = FALSE,
-	fig.height = 4,
-	fig.width = 6,
-	message = FALSE,
-	warning = FALSE,
-	dpi = 150,
-	out.width = "100%"
+  echo = FALSE,
+  error = FALSE,
+  fig.height = 4,
+  fig.width = 6.1,
+  dpi = 400,
+  message = FALSE,
+  warning = FALSE,
+  out.width = "100%"
 )
 library(readxl)
 library(tidyverse)
@@ -122,7 +122,7 @@ it_u18_sp <- testSynthIterations(
 
 ### All Countries graph
 
-```{r all_u18_rates, fig.width=7.9, fig.height=5.9}
+```{r all_u18_rates}
 
 labels <- synthData_u18_filt %>% 
   filter(Year==2013)
@@ -131,13 +131,17 @@ gr_u18_rates <- synthData_u18_filt %>%
   ggplot(aes(Year, rate, col = Country)) +
   geom_line(size = 1) +
   scale_colour_sphsu() +
-  theme_minimal() + 
-  theme(panel.grid = element_blank(),
-        axis.line = element_line(size = 0.1, colour = "grey"),
-        axis.line.y = element_blank(),
-        legend.position = "none",
-        plot.margin = unit(c(0,7,2,0), "cm"),
-        text = element_text(family = "sans")) +
+  theme_sphsu_light() + 
+  theme(
+    # panel.grid = element_blank(),
+    #     axis.line = element_line(size = 0.1, colour = "grey"),
+    #     axis.line.y = element_blank(),
+    # axis.line = element_line(colour = "#666666"),
+    panel.grid.major = element_line(colour = "#e0e0e0"),
+    panel.grid.minor = element_blank(),
+    legend.position = "none",
+    plot.margin = unit(c(0,5,0,0), "cm"),
+    text = element_text(family = "sans", size = 10)) +
   coord_cartesian(clip = "off") +
   geom_text_repel(data = labels,
                   aes(x = Year+0.5,
@@ -145,6 +149,7 @@ gr_u18_rates <- synthData_u18_filt %>%
                       label = Country),
                   family = "sans",
                   hjust = 0,
+                  size = 8*(5/14),
                   nudge_x = 3,
                   direction = "y",
                   xlim = c(NA, 2030),
@@ -152,9 +157,18 @@ gr_u18_rates <- synthData_u18_filt %>%
                   point.padding = 0) +
   ylab("Under-18 birth rate (per 1,000 women)") +
   scale_x_continuous(expand = expand_scale(add = c(0, -1)), limits  = c(1990, 2014)) +
-  scale_y_continuous(expand = c(0,0))
+  scale_y_continuous(expand = c(0,0), limits = c(0, NA))
 
-# ggsave(gr_u18_rates, "graphs/Under-18 all countries.svg", width = 200, height = 150, units = "mm")
+# {gr_u18_rates + 
+#     theme(text = element_text(size = 10),
+#           panel.grid.major = element_line(colour = "#e0e0e0"),
+#           panel.grid.minor = element_blank(),
+#           axis.line = element_line(colour = "#666666"),
+#           plot.margin = unit(c(0,5,0,0), "cm")
+#     )} %>%
+if (params$save_graphs){
+  ggsave("graphs/Under-18 all countries.png", gr_u18_rates, width = 155, height = 120, units = "mm", dpi = 400)
+}
 
 gr_u18_rates
 ```
@@ -169,7 +183,7 @@ synthPrep(synthData_u18_filt,
           time.optimise.ssr = opt_y1:1998,
           time.predictors.prior = opt_y1:1998,
           time.plot = opt_y1:2013
-          )
+)
 ```
 
 Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(md_u18_sp, "under 18")$tot_diff` births (to an average population of `r rateDiff(md_u18_sp, "under 18")$mean_pop` women).
@@ -182,14 +196,14 @@ gr_u18_sp #+ labs(title = sPredText(dp_u18_sp))
 
 if (params$save_graphs){
   
-  ggsave("graphs/Synth-u18-sp.svg",
+  ggsave("graphs/Synth-u18-sp.png",
          gr_u18_sp +
            theme(title = element_text(size = 14),
                  axis.title = element_text(size = 12)),
          dpi = 400,
-         width = 200, height = 150, units = "mm")
+         width = 155, height = 100, units = "mm")
   
-  }
+}
 
 ```
 
@@ -210,18 +224,18 @@ st_u18_sp$tab.pred %>% kable(caption = "Predictor balance between synthetic and 
 ```{r plot_u18_pb_nat}
 pb_plot_u18_sp <- 
   gg_gaps(md_u18_sp, pl_u18_filt) #+ 
-  # theme(text = element_text(size = 12),
-  #       title = element_text(size = 12)) +
-  # labs(title = "England vs Synthetic Control, no added predictors - country placebo")
+# theme(text = element_text(size = 12),
+#       title = element_text(size = 12)) +
+# labs(title = "England vs Synthetic Control, no added predictors - country placebo")
 
 if (params$plotly_graphs == "plotly"){
-  ggplotly(pb_plot_u18_sp)
+  ggplotly(height = 700, pb_plot_u18_sp)
 } else {
-pb_plot_u18_sp
+  pb_plot_u18_sp
 }
 
 if (params$plotly_graphs == "plotly" & params$publish_plotly) {
-api_create(last_plot(), filename = "Plot 43")
+  api_create(last_plot(), filename = "Plot 43")
 }
 
 # gr_u18_sp + pb_plot_u18_sp + plot_layout(guides = "collect")
@@ -235,6 +249,8 @@ api_create(last_plot(), filename = "Plot 43")
 # ggsave("graphs/Synth_u18_sp output.png", width = 300, height = 150, units = "mm", dpi = 500)
 
 ```
+
+View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/43).
 
 ```{r rank_u18}
 pp_u18_sp <- gg_pre_postMSPE(md_u18_sp, pl_u18_filt) + labs(title = "Post/pre-TPS mean squared prediction error")
@@ -259,16 +275,16 @@ pp_u18_sp
 ```{r save_u18_pb_nat, include=FALSE}
 if (params$save_graphs){ggsave(
   plot = pp_u18_sp +
-           theme(title = element_text(size = 14),
-                 axis.title = element_text(size = 12),
-                 legend.position = "none"),
-         dpi = 400, "graphs/Synth-u18-sp-pp-ratio.svg", width = 200, height = 150, units = "mm"
-  )}
- if (params$save_graphs){ggsave(
-   plot = pb_plot_u18_sp +
-           theme(title = element_text(size = 14),
-                 axis.title = element_text(size = 12),
-                 legend.position = "none"),  dpi = 400, "graphs/Synth-u18-sp-gaps.svg", width = 200, height = 150, units = "mm")}
+    theme(title = element_text(size = 14),
+          axis.title = element_text(size = 12),
+          legend.position = "none"),
+  dpi = 400, "graphs/Synth-u18-sp-pp-ratio.png", width = 155, height = 100, units = "mm"
+)}
+if (params$save_graphs){ggsave(
+  plot = pb_plot_u18_sp +
+    theme(title = element_text(size = 14),
+          axis.title = element_text(size = 12),
+          legend.position = "none"),  dpi = 400, "graphs/Synth-u18-sp-gaps.png", width = 155, height = 100, units = "mm")}
 ```
 
 ```{r u18_pb_time_graph, fig.show="animate",	interval = 1/20}
@@ -288,11 +304,11 @@ tp_u18_sp <- super_md_u18_filt %>%
 
 # tp_u18_sp + facet_wrap(super_md_u18_sp$IntYr, ncol = 3)
 if (params$plotly_graphs == "plotly") {
-tp_u18_sp_plotly <- ggplotly(tp_u18_sp) %>% 
-  animation_slider(currentvalue = list(prefix = "Year ", font = list(color="black"))) %>% 
-  animation_opts(easing = 'sin-in-out')
-
-return(tp_u18_sp_plotly)
+  tp_u18_sp_plotly <- ggplotly(height = 700, tp_u18_sp) %>% 
+    animation_slider(currentvalue = list(prefix = "Year ", font = list(color="black"))) %>% 
+    animation_opts(easing = 'sin-in-out')
+  
+  return(tp_u18_sp_plotly)
 } else if (params$plotly_graphs == "animate"){
   plt <- tp_u18_sp +
     transition_states(IntYr)
@@ -303,15 +319,17 @@ return(tp_u18_sp_plotly)
 }
 
 if (params$plotly_graphs == "plotly" & params$publish_plotly) {
- api_create(tp_u18_sp_plotly, filename = "England under-18 - special predictors - placebo time")
+  api_create(tp_u18_sp_plotly, filename = "England under-18 - special predictors - placebo time")
 }
 ```
+
+View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/15).
 
 ## Model 2: Under-20 pregnancy rates
 
 ### All Countries graph
 
-```{r all_u20_rates, fig.width=7.9, fig.height=5.9}
+```{r all_u20_rates}
 
 labels <- synthData_u20_filt %>% 
   filter(Year==2013)
@@ -320,28 +338,38 @@ gr_u20_rates <- synthData_u20_filt %>%
   ggplot(aes(Year, pRate, col = Country)) +
   geom_line(size = 1) +
   scale_colour_sphsu() +
-  theme_minimal() + 
-  theme(panel.grid = element_blank(),
-        axis.line = element_line(size = 0.1, colour = "grey"),
-        axis.line.y = element_blank(),
-        legend.position = "none",
-        plot.margin = unit(c(0,7,2,0), "cm"),
-        text = element_text(family = "sans")) +
+  theme_sphsu_light() + 
+  theme(
+    panel.grid.major = element_line(colour = "#e0e0e0"),
+    panel.grid.minor = element_blank(),
+    legend.position = "none",
+    plot.margin = unit(c(0,5,0,0), "cm"),
+    text = element_text(family = "sans", size = 10)) +
   coord_cartesian(clip = "off") +
   geom_text_repel(data = labels,
                   aes(x = Year+0.5, y = pRate, label = Country),
                   family = "sans",
                   hjust = 0,
                   nudge_x = 3,
+                  size = 8*(5/14),
                   direction = "y",
                   xlim = c(NA, 2030),
                   ylim = c(-1, 75),
                   point.padding = 0) +
   ylab("Under-20 pregnancy rate (per 1,000 women)") +
   scale_x_continuous(expand = expand_scale(add = c(0, -1)), limits  = c(1990, 2014)) +
-  scale_y_continuous(expand = c(0,0))
+  scale_y_continuous(expand = c(0,0), limits = c(0, NA))
 
-# ggsave("graphs/Under-20 all countries.svg", gr_u20_rates, width = 200, height = 150, units = "mm")
+# {gr_u20_rates + 
+#     theme(text = element_text(size = 10),
+#           panel.grid.major = element_line(colour = "#e0e0e0"),
+#           panel.grid.minor = element_blank(),
+#           axis.line = element_line(colour = "#666666"),
+#           plot.margin = unit(c(0,5,0,0), "cm")
+#     )} %>% 
+if (params$save_graphs){
+  ggsave("graphs/Under-20 all countries.png", gr_u20_rates, width = 155, height = 120, units = "mm", dpi = 400)
+}
 
 gr_u20_rates
 ```
@@ -361,7 +389,7 @@ synthPrep(synthData_u20_filt[,1:5],
           time.optimise.ssr = opt_y1:1998,
           time.predictors.prior = opt_y1:1998,
           time.plot = opt_y1:2013
-          )
+)
 ```
 
 Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(md_u20_sp, "under 20")$tot_diff` pregnancies (to an average population of `r rateDiff(md_u20_sp, "under 20")$mean_pop` women).
@@ -372,7 +400,7 @@ gr_u20_sp <- gg_synth(md = md_u20_sp, post = TRUE)
 
 
 gr_u20_sp# + labs(title = sPredText(dp_u20_sp))
- if (params$save_graphs){ggsave("graphs/Synth-u20-sp.svg", width = 200, height = 150, units = "mm")}
+if (params$save_graphs){ggsave(plot = gr_u20_sp, "graphs/Synth-u20-sp.png", width = 155, height = 100, units = "mm")}
 
 
 ```
@@ -393,16 +421,16 @@ st_u20_sp$tab.pred %>% kable(caption = "Predictor balance between synthetic and 
 ```{r plot_u20_sp_pb_nat}
 # gaps graph
 pb_plot_u20_sp <- 
-gg_gaps(md_u20_sp, pl_u20_filt)# + 
-  #labs(title = "England vs Synthetic Control, no added predictors - country placebo")
+  gg_gaps(md_u20_sp, pl_u20_filt)# + 
+#labs(title = "England vs Synthetic Control, no added predictors - country placebo")
 
 if (params$plotly_graphs == "plotly"){
-  ggplotly(pb_plot_u20_sp)
+  ggplotly(height = 700, pb_plot_u20_sp)
 } else {
-pb_plot_u20_sp
+  pb_plot_u20_sp
 }
 if (params$plotly_graphs == "plotly" & params$publish_plotly) {
- api_create(last_plot(), filename = "Plot 49")
+  api_create(last_plot(), filename = "Plot 49")
 }
 
 # ((gr_u20_sp +
@@ -414,6 +442,10 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 #     plot_layout(guides = "collect", nrow = 2, heights = c(6, 1))
 # ggsave("graphs/Synth_u20_sp output.png", width = 300, height = 150, units = "mm", dpi = 500)
 ```
+
+View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/49).
+
+
 ```{r rank_u20, include=FALSE}
 pp_u20_sp <- gg_pre_postMSPE(md_u20_sp, pl_u20_filt) + labs(title = "Post/pre-TPS mean squared prediction error")
 
@@ -433,9 +465,10 @@ In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Countr
 pp_u20_sp
 
 ```
+
 ```{r save_u20_sp_pb_nat, include=FALSE}
-if (params$save_graphs){ggsave(plot = pp_u20_sp, "graphs/Synth-u20-sp-pp-ratio.svg", width = 200, height = 150, units = "mm")}
- if (params$save_graphs){ggsave(plot = pb_plot_u20_sp, "graphs/Synth-u20-sp-gaps.svg", width = 200, height = 150, units = "mm")}
+if (params$save_graphs){ggsave(plot = pp_u20_sp, "graphs/Synth-u20-sp-pp-ratio.png", width = 155, height = 100, units = "mm")}
+if (params$save_graphs){ggsave(plot = pb_plot_u20_sp, "graphs/Synth-u20-sp-gaps.png", width = 155, height = 100, units = "mm")}
 ```
 
 
@@ -452,14 +485,14 @@ tp_u20_sp <- super_md_u20_filt %>%
         line = element_blank()) +
   scale_linetype_manual(name = "Data", values = c("Synthetic" = "solid", "Treated" = "solid")) +
   scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
-    labs(title = "England vs Synthetic Control, no added predictors - time placebo") +
+  labs(title = "England vs Synthetic Control, no added predictors - time placebo") +
   scale_y_continuous(limits = c(0, 80))
 
 
 if (params$plotly_graphs == "plotly") {
-  tp_u20_sp_plotly <- ggplotly(tp_u20_sp) %>% 
-  animation_slider(currentvalue = list(prefix = "Year ", font = list(color="black"))) %>% 
-  animation_opts(easing = 'sin-in-out')
+  tp_u20_sp_plotly <- ggplotly(height = 700, tp_u20_sp) %>% 
+    animation_slider(currentvalue = list(prefix = "Year ", font = list(color="black"))) %>% 
+    animation_opts(easing = 'sin-in-out')
   
   return(tp_u20_sp_plotly)
 } else if (params$plotly_graphs == "animate"){
@@ -471,9 +504,11 @@ if (params$plotly_graphs == "plotly") {
 }
 
 if (params$plotly_graphs == "plotly" & params$publish_plotly) {
- api_create(tp_u20_sp_plotly, filename = "England under-20 - special predictors - placebo time")
+  api_create(tp_u20_sp_plotly, filename = "England under-20 - rates only - placebo time")
 }
 ```
+
+View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/104).
 
 # Filtered to remove Scotland, no additional predictors
 
@@ -490,7 +525,7 @@ synthPrep(sd_noScot,
           time.optimise.ssr = opt_y1:1998,
           time.predictors.prior = 1990:1998,
           time.plot = 1990:2013
-          )
+)
 ```
 
 Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(md_u18_ns, "under 18")$tot_diff` births (to an average population of `r rateDiff(md_u18_ns, "under 18")$mean_pop` women).
@@ -501,7 +536,7 @@ gr_u18_ns <- gg_synth(md = md_u18_ns, post = TRUE) + xlim(1990, 2013)
 
 gr_u18_ns #+ labs(title = sPredText(dp_u18_ns))
 
-if (params$save_graphs){ggsave("graphs/Synth-u18-ns.svg", gr_u18_ns, width = 200, height = 150, units = "mm")}
+if (params$save_graphs){ggsave("graphs/Synth-u18-ns.png", gr_u18_ns, width = 155, height = 100, units = "mm")}
 
 ```
 
@@ -524,18 +559,18 @@ st_u18_ns$tab.pred %>% kable(caption = "Predictor balance between synthetic and 
 ```{r plot_u18_pb_ns}
 pb_plot_u18_ns <- 
   gg_gaps(md_u18_ns, pl_u18_ns) #+ 
-  # theme(text = element_text(size = 12),
-  #       title = element_text(size = 12)) +
-  # labs(title = "England vs Synthetic Control, no added predictors - country placebo")
+# theme(text = element_text(size = 12),
+#       title = element_text(size = 12)) +
+# labs(title = "England vs Synthetic Control, no added predictors - country placebo")
 
 if (params$plotly_graphs == "plotly"){
-  ggplotly(pb_plot_u18_ns)
+  ggplotly(height = 700, pb_plot_u18_ns)
 } else {
-pb_plot_u18_ns
+  pb_plot_u18_ns
 }
 
 if (params$plotly_graphs == "plotly" & params$publish_plotly) {
-api_create(last_plot(), filename = "Gaps - U18 - Excl Scotland")
+  api_create(last_plot(), filename = "Gaps - U18 - Excl Scotland")
 }
 
 # ((gr_u18_ns +
@@ -548,6 +583,9 @@ api_create(last_plot(), filename = "Gaps - U18 - Excl Scotland")
 # ggsave("graphs/Synth_u18_ns output.png", width = 300, height = 150, units = "mm", dpi = 500)
 
 ```
+
+View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/61).
+
 ```{r rank_u18_ns}
 pp_u18_ns <- gg_pre_postMSPE(md_u18_ns, pl_u18_filt) + labs(title = "Post/pre-TPS mean squared prediction error")
 
@@ -569,8 +607,8 @@ pp_u18_ns
 ```
 
 ```{r save_u18_pb_nat_ns, include=FALSE}
-if (params$save_graphs){ggsave(plot = pp_u18_ns, "graphs/Synth-u18-ns-pp-ratio.svg", width = 200, height = 150, units = "mm")}
- if (params$save_graphs){ggsave(plot = pb_plot_u18_ns, "graphs/Synth-u18-ns-gaps.svg", width = 200, height = 150, units = "mm")}
+if (params$save_graphs){ggsave(plot = pp_u18_ns, "graphs/Synth-u18-ns-pp-ratio.png", width = 155, height = 100, units = "mm")}
+if (params$save_graphs){ggsave(plot = pb_plot_u18_ns, "graphs/Synth-u18-ns-gaps.png", width = 155, height = 100, units = "mm")}
 ```
 
 ```{r u18_pb_time_graph_ns, fig.show="animate",	interval = 1/20}
@@ -590,11 +628,11 @@ tp_u18_ns <- super_md_u18_ns %>%
 
 # tp_u18_ns + facet_wrap(super_md_u18_ns$IntYr, ncol = 3)
 if (params$plotly_graphs == "plotly") {
-tp_u18_ns_plotly <- ggplotly(tp_u18_ns) %>% 
-  animation_slider(currentvalue = list(prefix = "Year ", font = list(color="black"))) %>% 
-  animation_opts(easing = 'sin-in-out')
-
-return(tp_u18_ns_plotly)
+  tp_u18_ns_plotly <- ggplotly(height = 700, tp_u18_ns) %>% 
+    animation_slider(currentvalue = list(prefix = "Year ", font = list(color="black"))) %>% 
+    animation_opts(easing = 'sin-in-out')
+  
+  return(tp_u18_ns_plotly)
 } else if (params$plotly_graphs == "animate"){
   plt <- tp_u18_ns +
     transition_states(IntYr)
@@ -605,9 +643,11 @@ return(tp_u18_ns_plotly)
 }
 
 if (params$plotly_graphs == "plotly" & params$publish_plotly) {
- api_create(tp_u18_ns_plotly, filename = "England under-18 - excl Scotland - placebo time")
+  api_create(tp_u18_ns_plotly, filename = "England under-18 - excl Scotland - placebo time")
 }
 ```
+
+View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/63).
 
 ## Model 4: Under-20 pregnancy rates
 
@@ -622,7 +662,7 @@ synthPrep(sd_noScot,
           time.optimise.ssr = opt_y1:1998,
           time.predictors.prior = 1990:1998,
           time.plot = 1990:2013
-          )
+)
 ```
 
 Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(md_u20_ns, "under 20")$tot_diff` pregnancies (to an average population of `r rateDiff(md_u20_ns, "under 20")$mean_pop` women).
@@ -633,7 +673,7 @@ gr_u20_ns <- gg_synth(md = md_u20_ns, post = TRUE) + xlim(1990, 2013)
 
 
 gr_u20_ns# + labs(title = sPredText(dp_u20_ns))
- if (params$save_graphs){ggsave("graphs/Synth-u20-sp.svg", gr_u20_ns, width = 200, height = 150, units = "mm")}
+if (params$save_graphs){ggsave("graphs/Synth-u20-ns.png", gr_u20_ns, width = 155, height = 100, units = "mm")}
 ```
 
 Loss-V (For optimised period) = `r signif(so_u20_ns$loss.v[[1]], 3)`, MSPE (for whole pre-intervention observation period) = `r pre_MSPE(md_u20_ns)`.
@@ -654,16 +694,16 @@ st_u20_ns$tab.pred %>% kable(caption = "Predictor balance between synthetic and 
 ```{r plot_u20_ns_pb_nat}
 # gaps graph
 pb_plot_u20_ns <- 
-gg_gaps(md_u20_ns, pl_u20_ns)# + 
-  #labs(title = "England vs Synthetic Control, no added predictors - country placebo")
+  gg_gaps(md_u20_ns, pl_u20_ns)# + 
+#labs(title = "England vs Synthetic Control, no added predictors - country placebo")
 
 if (params$plotly_graphs == "plotly"){
-  ggplotly(pb_plot_u20_ns)
+  ggplotly(height = 700, pb_plot_u20_ns)
 } else {
-pb_plot_u20_ns
+  pb_plot_u20_ns
 }
 if (params$plotly_graphs == "plotly" & params$publish_plotly) {
- api_create(last_plot(), filename = "Plot 49")
+  api_create(last_plot(), filename = "Model 4 - u20 noscot pl country")
 }
 
 
@@ -676,6 +716,9 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 #     plot_layout(guides = "collect", nrow = 2, heights = c(6, 1))
 # ggsave("graphs/Synth_u20_ns output.png", width = 300, height = 150, units = "mm", dpi = 500)
 ```
+
+View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/102).
+
 ```{r rank_u20_ns}
 pp_u20_ns <- gg_pre_postMSPE(md_u20_ns, pl_u20_ns) + labs(title = "Post/pre-TPS mean squared prediction error")
 
@@ -696,8 +739,8 @@ pp_u20_ns
 
 ```
 ```{r save_u20_ns_pb_nat, include=FALSE}
-if (params$save_graphs){ggsave(plot = pp_u20_ns, "graphs/Synth-u20-sp-pp-ratio.svg", width = 200, height = 150, units = "mm")}
- if (params$save_graphs){ggsave(plot = pb_plot_u20_ns, "graphs/Synth-u20-sp-gaps.svg", width = 200, height = 150, units = "mm")}
+if (params$save_graphs){ggsave(plot = pp_u20_ns, "graphs/Synth-u20-ns-pp-ratio.png", width = 155, height = 100, units = "mm")}
+if (params$save_graphs){ggsave(plot = pb_plot_u20_ns, "graphs/Synth-u20-ns-gaps.png", width = 155, height = 100, units = "mm")}
 ```
 
 
@@ -714,14 +757,14 @@ tp_u20_ns <- super_md_u20_ns %>%
         line = element_blank()) +
   scale_linetype_manual(name = "Data", values = c("Synthetic" = "solid", "Treated" = "solid")) +
   scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
-    labs(title = "England vs Synthetic Control, no added predictors - time placebo") +
+  labs(title = "England vs Synthetic Control, no added predictors - time placebo") +
   scale_y_continuous(limits = c(0, 80))
 
 
 if (params$plotly_graphs == "plotly") {
-  tp_u20_ns_plotly <- ggplotly(tp_u20_ns) %>% 
-  animation_slider(currentvalue = list(prefix = "Year ", font = list(color="black"))) %>% 
-  animation_opts(easing = 'sin-in-out')
+  tp_u20_ns_plotly <- ggplotly(height = 700, tp_u20_ns) %>% 
+    animation_slider(currentvalue = list(prefix = "Year ", font = list(color="black"))) %>% 
+    animation_opts(easing = 'sin-in-out')
   
   return(tp_u20_ns_plotly)
 } else if (params$plotly_graphs == "animate"){
@@ -733,9 +776,11 @@ if (params$plotly_graphs == "plotly") {
 }
 
 if (params$plotly_graphs == "plotly" & params$publish_plotly) {
- api_create(tp_u20_ns_plotly, filename = "England under-20 - special predictors - placebo time")
+  api_create(tp_u20_ns_plotly, filename = "England under-20 - special predictors - placebo time")
 }
 ```
+
+View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/17).
 
 # Adding all predictors
 
@@ -750,7 +795,7 @@ synthPrep(sd_noScot %>% filter(Country != "New Zealand"),
           "u18_all",
           dependent = "rate",
           special.predictors = sp_u18_filt %>% 
-            append(sp_u20_filt) %>% 
+            append(sp_u20_filt) %>%
             append(sp_u20_gdp) %>% 
             append(sp_u20_edu) %>% 
             append(sp_u20_mob) %>% 
@@ -770,7 +815,7 @@ gr_u18_all <- gg_synth(md = md_u18_all, post = TRUE)  + xlim(1990, 2013)
 gr_u18_all #+ labs(title = sPredText(dp_u18_all))
 
 
-#  ggsave("graphs/Synth-u18-all-1990.svg", width = 200, height = 150, units = "mm")
+#  ggsave("graphs/Synth-u18-all-1990.png", width = 200, height = 150, units = "mm")
 ```
 
 Loss-V (For optimised period) = `r signif(so_u18_all$loss.v[[1]], 3)`, MSPE (for whole pre-intervention observation period) = `r pre_MSPE(md_u18_all)`.
@@ -791,21 +836,24 @@ st_u18_all$tab.pred %>% kable(caption = "Predictor balance between synthetic and
 ```{r plot_u18_pb_all}
 pb_plot_u18_all <- 
   gg_gaps(md_u18_all, pl_u18_all) #+ 
-  # theme(text = element_text(size = 12),
-  #       title = element_text(size = 12)) +
-  # labs(title = "England vs Synthetic Control, no added predictors - country placebo")
+# theme(text = element_text(size = 12),
+#       title = element_text(size = 12)) +
+# labs(title = "England vs Synthetic Control, no added predictors - country placebo")
 
 if (params$plotly_graphs == "plotly"){
-  ggplotly(pb_plot_u18_all)
+  ggplotly(height = 700, pb_plot_u18_all)
 } else {
-pb_plot_u18_all
+  pb_plot_u18_all
 }
 
 if (params$plotly_graphs == "plotly" & params$publish_plotly) {
-api_create(last_plot(), filename = "Gaps - U18 - Excl Scotland")
+  api_create(last_plot(), filename = "Gaps - U18 - all predictors")
 }
 
 ```
+
+
+View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/106).
 
 ```{r rank_u18_all}
 pp_u18_all <- gg_pre_postMSPE(md_u18_all, pl_u18_all) + labs(title = "Post/pre-TPS mean squared prediction error")
@@ -837,7 +885,7 @@ synthPrep(sd_noScot %>% filter(Country != "New Zealand"),
           "u20_all",
           dependent = "pRate",
           special.predictors = sp_u20_filt %>% 
-            # append(sp_u18_filt) %>% 
+            append(sp_u18_filt) %>%
             append(sp_u20_mob) %>% 
             append(sp_u20_edu) %>% 
             append(sp_u20_gdp) %>% 
@@ -873,21 +921,23 @@ st_u20_all$tab.pred %>% kable(caption = "Predictor balance between synthetic and
 ```{r plot_u20_pb_all}
 pb_plot_u20_all <- 
   gg_gaps(md_u20_all, pl_u20_all) #+ 
-  # theme(text = element_text(size = 12),
-  #       title = element_text(size = 12)) +
-  # labs(title = "England vs Synthetic Control, no added predictors - country placebo")
+# theme(text = element_text(size = 12),
+#       title = element_text(size = 12)) +
+# labs(title = "England vs Synthetic Control, no added predictors - country placebo")
 
 if (params$plotly_graphs == "plotly"){
-  ggplotly(pb_plot_u20_all)
+  ggplotly(height = 700, pb_plot_u20_all)
 } else {
-pb_plot_u20_all
+  pb_plot_u20_all
 }
 
 if (params$plotly_graphs == "plotly" & params$publish_plotly) {
-api_create(last_plot(), filename = "Gaps - U20 - Excl Scotland")
+  api_create(last_plot(), filename = "Gaps - U20 - Excl Scotland")
 }
 
 ```
+
+View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/100).
 
 ```{r rank_u20_all}
 pp_u20_all <- gg_pre_postMSPE(md_u20_all, pl_u20_all) + labs(title = "Post/pre-TPS mean squared prediction error")
