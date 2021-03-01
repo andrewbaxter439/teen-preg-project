@@ -18,3 +18,5 @@ sample code for synth.txt
 *.docx
 *[old]*
 !select_synth.Rmd
+!renv.lock
+!.Rprofile
