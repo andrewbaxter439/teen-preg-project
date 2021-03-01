@@ -1,4 +1,4 @@
-library(XLConnect)
+# library(XLConnect)
 library(tidyverse)
 
 # Connect to Excel file --------------------------------------------------------------------------------------
