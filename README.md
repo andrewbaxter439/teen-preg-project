@@ -12,7 +12,10 @@ Code used in the project evaluating England's Teenage Pregnancy Strategy.
 
 The file `Synth-iterations-report.rmd` will produce outputs for Synthetic Control analyses. The Interrupted Time Series analyses can be reproduced [here](https://andybaxter.shinyapps.io/teen_preg_uk_its/) using a Shiny app (repo for Shiny app [here](https://github.com/andrewbaxter439/ITS_shinyapp))
 
+To get started, clone the repository, open `teen-preg-project.Rproj` and run `renv::restore()` in Rstudio. Open `Synth-iterations-report.rmd` and run all chunks to reproduce synthetic control analyses.
+
 ## Data Sources
+(Source data is freely available from all sources but cannot be redistributed here. Compiled data included as `.rdata` files)
 
  - [The Human Mortality Database](https://www.mortality.org/) (Requires registration; accessed 9 Apr 2019)
  - [The Human Fertility Database](https://www.humanfertility.org/) (Requires registration; accessed 25 March 2019)
@@ -20,4 +23,4 @@ The file `Synth-iterations-report.rmd` will produce outputs for Synthetic Contro
  - [World Bank Open Data](https://data.worldbank.org/) (accessed 23 April 2019)
  - [European Health Information Gateway - Health for All Explorer](https://gateway.euro.who.int/en/hfa-explorer/) (accessed 9 September 2019)
  - [Guttmacher Institute - Pregnancies, Births and Abortions Among Adolescents and Young Women in the United States, 2013](https://www.guttmacher.org/report/us-adolescent-pregnancy-trends-2013) (accessed 17 January 2019)
- - [Public spending on education - OECD Data](https://data.oecd.org/eduresource/public-spending-on-education.htm) (accesed 21 October 2019)
+ - [Public spending on education - OECD Data](https://data.oecd.org/eduresource/public-spending-on-education.htm) (accessed 21 October 2019)
