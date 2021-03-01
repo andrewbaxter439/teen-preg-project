@@ -13,10 +13,11 @@ Initial_ITS_models.*
 style.css
 .svg
 .png
--*.R*
 sample code for synth.txt
 *.docx
-*[old]*
+-*.R*
+*\[old\]*
 !select_synth.Rmd
 !renv.lock
 !.Rprofile
+!/Data
