@@ -14,6 +14,8 @@ The file `Synth-iterations-report.rmd` will produce outputs for Synthetic Contro
 
 To get started, clone the repository, open `teen-preg-project.Rproj` and run `renv::restore()` in Rstudio. Open `Synth-iterations-report.rmd` and run all chunks to reproduce synthetic control analyses.
 
+The `R` folder contains all code developed throughout the project.
+
 ## Data Sources
 (Source data is freely available from all sources but cannot be redistributed here. Compiled data included as `.rdata` files)
 
