@@ -126,13 +126,6 @@
       "Repository": "CRAN",
       "Hash": "bd6eb9b3b5b37e14f7cec093a48312bd"
     },
-    "XLConnect": {
-      "Package": "XLConnect",
-      "Version": "1.0.2",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "2b2edc22c34b909c687f3c3d8dbfdcdd"
-    },
     "abind": {
       "Package": "abind",
       "Version": "1.4-5",
@@ -975,13 +968,6 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "d41a5849071941c6c269b57324515398"
-    },
-    "rJava": {
-      "Package": "rJava",
-      "Version": "0.9-13",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "cfcca6464c6d145e28924800b5bd7f44"
     },
     "rappdirs": {
       "Package": "rappdirs",
