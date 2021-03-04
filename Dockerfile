@@ -6,6 +6,6 @@ RUN apt-get update && apt-get -y --no-install-recommends install libudunits2-dev
 RUN R -e "install.packages('remotes', repos = c(CRAN = 'https://cloud.r-project.org'))"
 RUN R -e "remotes::install_github('rstudio/renv@${RENV_VERSION}')"
 
-WORKDIR /home/rstudio
-COPY . .
+WORKDIR /project
 RUN R -e 'renv::restore()'
+COPY . /home/rstudio
