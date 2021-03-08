@@ -48,6 +48,9 @@ knitr::opts_chunk$set(
   warning = FALSE,
   out.width = "100%"
 )
+
+options(DT.options = list(rownames = FALSE))
+
 library(readxl)
 library(tidyverse)
 library(stringr)
@@ -96,7 +99,7 @@ caption {
 Data from Human Mortality Database and Human Fertility Database was used to calculate birth rates. This was tidied to give Under-18 rates:
 
 ```{r tidy_u18}
-DT::datatable(synthData_u18_filt %>% mutate_if(is.numeric, ~ round(.,2)))
+DT::datatable(synthData_u18_filt %>% mutate_if(is.numeric, ~ round(.,2)), rownames = FALSE)
 ```
 Data available to [download here](http://phd.andybaxter.me/data/under-18-birth-rates.csv).
 
@@ -107,7 +110,7 @@ Data available to [download here](http://phd.andybaxter.me/data/under-18-birth-r
 Abortion estimates were added to give Under-20 rates:
 
 ```{r tidy_u_19}
-DT::datatable(synthData_u20_filt %>% mutate_if(is.numeric, ~ round(.,2)))
+DT::datatable(synthData_u20_filt %>% mutate_if(is.numeric, ~ round(.,2)), rownames = FALSE)
 ```
 
 Data available to [download here](http://phd.andybaxter.me/data/under-20-pregnancy-rates.csv).
