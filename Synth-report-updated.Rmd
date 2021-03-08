@@ -13,6 +13,7 @@ output:
     toc: true
     toc_depth: 2
     number_sections: true
+    df_print: !expr DT::datatable
     toc_float:
       collapsed: false
   # word_document:
@@ -90,14 +91,18 @@ caption {
 Data from Human Mortality Database and Human Fertility Database was used to calculate birth rates. This was tidied to give Under-18 rates:
 
 ```{r tidy_u18}
-kable(head(synthData_u18_filt %>% mutate_if(is.numeric, ~ round(.,2))))
+DT::datatable(synthData_u18_filt %>% mutate_if(is.numeric, ~ round(.,2)))
 ```
+
+Data available to [download here](http://phd.andybaxter.me/data/under-18-birth-rates.csv).
 
 Abortion estimates were added to give Under-20 rates:
 
 ```{r tidy_u_19}
-kable(head(synthData_u20_filt %>% mutate_if(is.numeric, ~ round(.,2))))
+DT::datatable(synthData_u20_filt %>% mutate_if(is.numeric, ~ round(.,2)))
 ```
+
+Data available to [download here](http://phd.andybaxter.me/data/under-20-pregnancy-rates.csv).
 
 # Iterating through year combinations
 
@@ -107,7 +112,7 @@ For each comparison, I iterated through all combinations of years as special pre
 it_u18_sp <- testSynthIterations(
   yrs = 1990:1998,
   pred = "rate",
-  data = synthData_u18[,1:4],
+  data = synthData_u18_filt[,1:4],
   ccodes = u_18_ccodes,
   n = 4,
   predictors = NULL,
