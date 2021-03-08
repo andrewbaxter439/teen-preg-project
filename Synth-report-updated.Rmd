@@ -3,12 +3,6 @@ title: "Synth reporting"
 author: "Andrew Baxter"
 date: "`r Sys.Date()`"
 output: 
-  # pdf_document:
-  #   fig_height: 5
-  #   fig_width: 8
-  #   toc: true
-  #   toc_depth: 2
-  #   number_sections: true
   html_document:
     toc: true
     toc_depth: 2
@@ -16,6 +10,12 @@ output:
     df_print: !expr DT::datatable
     toc_float:
       collapsed: false
+  #   fig_height: 5
+  #   fig_width: 8
+  #   toc: true
+  #   toc_depth: 2
+  #   number_sections: true
+  # pdf_document:
   # word_document:
   #   fig_height: 4.7
   #   fig_width: 6.1
@@ -72,6 +72,9 @@ load("Data/time_placebos_b.rdata")  # outputted from 'Synth_time_pbs.R'
 # load('Data/noScot.rdata')
 load("Data/other_predictors.rdata")
 source('R/Synth_functions.R')
+
+synthData_u20_filt[synthData_u20_filt$Country=="New Zealand","rate"] <- 
+  synthData_u18_filt[synthData_u18_filt$Country=="New Zealand","rate"]
 ```
 ```{r results='asis'}
 cat("
@@ -88,6 +91,8 @@ caption {
 
 # Setting up data
 
+## Under-18 birth rates
+
 Data from Human Mortality Database and Human Fertility Database was used to calculate birth rates. This was tidied to give Under-18 rates:
 
 ```{r tidy_u18}
@@ -96,6 +101,8 @@ DT::datatable(synthData_u18_filt %>% mutate_if(is.numeric, ~ round(.,2)))
 Data available to [download here](http://phd.andybaxter.me/data/under-18-birth-rates.csv).
 
 <button class = "btn btn-primary" name="button" onclick="http://phd.andybaxter.me/data/under-18-birth-rates.csv">`r shiny::icon('download', class = "light" ,lib = "font-awesome")` Download data (csv)</button>
+
+## Under-20 pregnancy rates
 
 Abortion estimates were added to give Under-20 rates:
 
@@ -385,8 +392,7 @@ gr_u20_rates
 ### England vs Synthetic Control
 ```{r u20_sp, include = FALSE}
 opt_y1 <- 1990
-synthData_u20_filt[synthData_u20_filt$Country=="New Zealand","rate"] <- 
-  synthData_u18_filt[synthData_u18_filt$Country=="New Zealand","rate"]
+
 
 # dataprep and synth
 synthPrep(synthData_u20_filt[,1:5],
