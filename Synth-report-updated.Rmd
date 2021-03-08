@@ -93,8 +93,9 @@ Data from Human Mortality Database and Human Fertility Database was used to calc
 ```{r tidy_u18}
 DT::datatable(synthData_u18_filt %>% mutate_if(is.numeric, ~ round(.,2)))
 ```
-
 Data available to [download here](http://phd.andybaxter.me/data/under-18-birth-rates.csv).
+
+<button class = "btn btn-primary" name="button" onclick="http://phd.andybaxter.me/data/under-18-birth-rates.csv">`r shiny::icon('download', class = "light" ,lib = "font-awesome")` Download data (csv)</button>
 
 Abortion estimates were added to give Under-20 rates:
 
@@ -103,6 +104,8 @@ DT::datatable(synthData_u20_filt %>% mutate_if(is.numeric, ~ round(.,2)))
 ```
 
 Data available to [download here](http://phd.andybaxter.me/data/under-20-pregnancy-rates.csv).
+
+<button class = "btn btn-primary" name="button" onclick="http://phd.andybaxter.me/data/under-20-pregnancy-rates.csv">`r shiny::icon('download', class = "light" ,lib = "font-awesome")` Download data (csv)</button>
 
 # Iterating through year combinations
 
@@ -389,6 +392,7 @@ synthData_u20_filt[synthData_u20_filt$Country=="New Zealand","rate"] <-
 synthPrep(synthData_u20_filt[,1:5],
           "u20_sp",
           dependent = "pRate",
+          # predictors = "pRate",
           special.predictors = sp_u20_filt,
           # special.predictors = append(sp_u20_filt, sp_u18_filt),
           time.optimise.ssr = opt_y1:1998,
