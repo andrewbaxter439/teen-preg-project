@@ -37,11 +37,12 @@ super_md_u18_filt %>%
   ylab(paste0("Under-18 birth rate (per 1,000 women)")) +
   theme(legend.title = element_blank(),
         panel.grid.major = element_line(colour = "#e0e0e0"),
-        panel.grid.minor = element_blank()
+        panel.grid.minor = element_blank(),
+        title = element_text(size = 12)
         ) +
   scale_linetype_manual(name = "Data", values = c("Synthetic" = "solid", "Treated" = "solid")) +
   scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
-  labs(title = "England vs Synthetic Control, faceted by placebo year") +
+  labs(title = "England vs Synthetic Control with placebo intervention years") +
   scale_y_continuous(limits = c(0, 20)) +
   facet_wrap(~ IntYr)
 
@@ -64,7 +65,7 @@ super_md_u20_filt %>%
         ) +
   scale_linetype_manual(name = "Data", values = c("Synthetic" = "solid", "Treated" = "solid")) +
   scale_colour_manual(name = "Data", values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
-  labs(title = "England vs Synthetic Control, faceted by placebo year") +
+  labs(title = "England vs Synthetic Control with placebo intervention years") +
   scale_y_continuous(limits = c(0, 80)) +
   facet_wrap(~ IntYr)
 

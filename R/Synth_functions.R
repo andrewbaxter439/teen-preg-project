@@ -2,97 +2,126 @@
 # so = synth.res (output from `synth` function)
 # dp = dataprep.res (output from `dataprep` function)
 
-gg_synth <- function(dp = NULL, md = NULL, yr = 1999, post = FALSE, mspe = NULL, mspeOptim = FALSE) {
-  require(dplyr)
-  require(SPHSUgraphs)
-  require(Synth)
-  
-  
-  if ((is.null(dp)&&is.null(md))|(!is.null(dp)&&!is.null(md)))
-    stop("Please enter either dataprep object or model")
-  
-  if (is.null(md)&&!is.null(dp)) {
+gg_synth <-
+  function(dp = NULL,
+           md = NULL,
+           yr = 1999,
+           post = FALSE,
+           mspe = NULL,
+           mspeOptim = FALSE,
+           linesize = 1) {
+    require(dplyr)
+    require(SPHSUgraphs)
+    require(Synth)
     
-    agegrp <- gsub("^.*(\\d{2}).*$","\\1", deparse(substitute(dp)))
-    so <- synth(dp)
+    
+    if ((is.null(dp) && is.null(md)) | (!is.null(dp) && !is.null(md)))
+      stop("Please enter either dataprep object or model")
+    
+    if (is.null(md) && !is.null(dp)) {
+      agegrp <- gsub("^.*(\\d{2}).*$", "\\1", deparse(substitute(dp)))
+      so <- synth(dp)
+      synthC <- dp$Y0 %*% so$solution.w
+      
+      md <-
+        tibble(
+          Year = as.numeric(rownames(dp$Y1)),
+          Treated = dp$Y1[, 1],
+          Synthetic = synthC[, 1]
+        ) %>%
+        gather("Group", "Rate",-1)
+      if (is.null(mspe) & mspeOptim) {
+        mspe <- so$loss.v[1]
+      }
+    } else {
+      agegrp <- gsub("^.*(\\d{2}).*$", "\\1", deparse(substitute(md)))
+    }
+    
+    if (post) {
+      xmax = NA
+    } else {
+      xmax = yr
+      md <- md %>% filter(Year < yr)
+    }
+    
+    if (is.null(mspe) & mspeOptim) {
+      stop(
+        "Please enter mspe for the synth output, or change mspeOptim to 'FALSE' to calculate from whole pre-intervention period."
+      )
+    }
+    
+    if (!is.null(mspe)) {
+      mspe <- signif(mspe, 3)
+    } else {
+      mspe <- pre_MSPE(md)
+    }
+    
+    
+    plot <-
+      ggplot(md, aes(Year, Rate, col = Group)) +  # no linetype change
+      # plot <-  ggplot(md, aes(Year, Rate, col = Group, linetype = Group)) +
+      geom_line(size = linesize) +
+      theme_sphsu_light() +
+      ylab(paste0("Under-", agegrp, " rate (per 1,000 women)")) +
+      theme(
+        legend.title = element_blank(),
+        panel.grid.major = element_line(colour = "#e0e0e0"),
+        panel.grid.minor = element_blank(),
+        # line = element_blank()
+      ) +
+      # scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +  # no linetype change
+      scale_colour_manual(
+        name = "Data",
+        breaks = c("Treated", "Synthetic"),
+        labels = c("England and Wales", "Synthetic"),
+        values = c(
+          "Synthetic" = sphsu_cols("Turquoise", names = FALSE),
+          "Treated" = sphsu_cols("Thistle", names = FALSE)
+        )
+      ) +
+      # scale_colour_manual(name = "Data", labels = c("England and Wales", "Synthetic"), values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
+      geom_vline(xintercept = 1998.5, linetype = "dotted") +
+      scale_x_continuous(limits = c(NA, xmax)) +
+      scale_y_continuous(limits = c(0, NA)) +
+      labs(subtitle = paste0("Pre-intervention MSPE = ", mspe))
+    
+    return(plot)
+    
+  }
+
+predvalues_synth <-
+  function(dp,
+           synth_outputs = TRUE,
+           yr = 1999,
+           ...) {
+    require(dplyr)
+    require(Synth)
+    
+    so <- synth(dp, ...)
     synthC <- dp$Y0 %*% so$solution.w
     
-    md <- tibble(Year = as.numeric(rownames(dp$Y1)), Treated = dp$Y1[,1], Synthetic = synthC[,1]) %>% 
-      gather("Group", "Rate", -1)
-    if (is.null(mspe) & mspeOptim){
-      mspe <- so$loss.v[1]
+    if (synth_outputs) {
+      so_name <- gsub("^[a-z]+_(.*$)", "so_\\1", deparse(substitute(dp)))
+      st_name <-
+        gsub("^[a-z]+_(.*$)", "st_\\1", deparse(substitute(dp)))
+      print(paste("outputting", so_name, "and", st_name))
+      st <- synth.tab(so, dp)
+      
+      assign(so_name, so, envir = .GlobalEnv)
+      assign(st_name, st, envir = .GlobalEnv)
     }
-  } else {
     
-    agegrp <- gsub("^.*(\\d{2}).*$","\\1", deparse(substitute(md)))
-  }
-  
-  if(post){
-    xmax = NA
-  } else {
-    xmax = yr
-    md <- md %>% filter(Year<yr)
-  }
-  
-  if(is.null(mspe) & mspeOptim) {
-    stop("Please enter mspe for the synth output, or change mspeOptim to 'FALSE' to calculate from whole pre-intervention period.")
-  }
-  
-  if(!is.null(mspe)){
-    mspe <- signif(mspe, 3)
-  } else {
-    mspe <- pre_MSPE(md)
-  }
-  
-  
-  plot <-  ggplot(md, aes(Year, Rate, col = Group)) +  # no linetype change
-    # plot <-  ggplot(md, aes(Year, Rate, col = Group, linetype = Group)) +
-    geom_line(size = 2) +
-    theme_sphsu_light() +
-    ylab(paste0("Under-", agegrp, " rate (per 1,000 women)")) +
-    theme(legend.title = element_blank(),
-          panel.grid.major = element_line(colour = "#e0e0e0"),
-          panel.grid.minor = element_blank(),
-          # line = element_blank()
-          ) +
-    # scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +  # no linetype change
-    scale_colour_manual(name = "Data", 
-                        breaks = c("Treated", "Synthetic"),
-                        labels = c("England and Wales", "Synthetic"), 
-                        values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
-    # scale_colour_manual(name = "Data", labels = c("England and Wales", "Synthetic"), values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
-    geom_vline(xintercept = 1998.5, linetype = "dotted") +
-    scale_x_continuous(limits = c(NA, xmax)) +
-    scale_y_continuous(limits = c(0, NA)) +
-    labs(subtitle = paste0("Pre-intervention MSPE = ", mspe))
-  
-  return(plot)
-  
-}
-
-predvalues_synth <- function(dp, synth_outputs = TRUE, yr = 1999, ...) {
-  require(dplyr)
-  require(Synth)
-  
-  so <- synth(dp, ...)
-  synthC <- dp$Y0 %*% so$solution.w
-  
-  if (synth_outputs){
-    so_name <- gsub("^[a-z]+_(.*$)", "so_\\1", deparse(substitute(dp)))
-    st_name <- gsub("^[a-z]+_(.*$)", "st_\\1", deparse(substitute(dp)))
-    print(paste("outputting", so_name, "and", st_name))
-    st <- synth.tab(so, dp)
+    df <-
+      tibble(
+        Year = as.numeric(rownames(dp$Y1)),
+        Treated = dp$Y1[, 1],
+        Synthetic = synthC[, 1]
+      ) %>%
+      gather("Group", "Rate",-1)
     
-    assign(so_name, so, envir = .GlobalEnv)
-    assign(st_name, st, envir = .GlobalEnv)
+    return(df)
+    
   }
-  
-  df <- tibble(Year = as.numeric(rownames(dp$Y1)), Treated = dp$Y1[,1], Synthetic = synthC[,1]) %>% 
-    gather("Group", "Rate", -1)
-  
-  return(df)
-  
-}
 
 printCoefficients <- function(md = NULL, model = NULL){
   
@@ -184,14 +213,25 @@ generatePlacebos <- function(data,
   return(placebos)
 }
 
-pre_MSPE <- function (md){
+pre_MSPE <- function (md) {
   md %>%
-    filter(Year < 1999) %>% 
-    spread(Group, Rate) %>% 
-    mutate(SPE = (Treated - Synthetic)**2) %>% 
-    summarise(MSPE = mean(SPE)) %>% 
-    pull() %>% 
+    filter(Year < 1999) %>%
+    spread(Group, Rate) %>%
+    mutate(SPE = (Treated - Synthetic) ** 2) %>%
+    summarise(MSPE = mean(SPE)) %>%
+    pull() %>%
     signif(3)
+}
+
+pre_corr <- function (md) {
+  
+  ps <- md %>%
+    filter(Year < 1999) %>%
+    pivot_wider(names_from = "Group", values_from = "Rate") %>%
+    select(-Year)
+  
+  cor(ps$Treated, ps$Synthetic) ^ 2
+  
 }
 
 sPredText <- function(dp) {
@@ -760,9 +800,20 @@ gg_pre_postMSPE <- function(md, pl){
   
   ytop <- max(ggp[["data"]][[1]][["count"]])
   
-  p <-   p + geom_text(aes(x = xintercept, label = label),vjust = 0, hjust = 0, y = ytop + 0.1, inherit.aes = FALSE) +
-    geom_segment(aes(x = xintercept, xend = xintercept), y = 0, yend = ytop, inherit.aes = FALSE) +
-    ylim(0, ytop + 0.25)
+  p <-
+    p + geom_text(aes(x = xintercept, label = label),
+                       vjust = -1, hjust = 0, y = Inf, inherit.aes = FALSE) +
+    geom_segment(aes(x = xintercept, xend = xintercept), 
+                 y = 0, 
+                 yend = Inf,
+                 inherit.aes = FALSE) +
+    scale_y_continuous(expand = expansion(add = c(0, 0.5))) +
+      coord_cartesian(clip = "off") +
+      theme(
+         plot.title = element_text(margin = margin(b = 1, unit = "cm")),
+         plot.margin = margin(1, unit = "cm")
+            )
+      
   
   return(p)
 }
