@@ -1,0 +1,29 @@
+Model 1:
+https://andybaxter.shinyapps.io/teen_preg_uk_its/?_inputs_&session=%22Full%20Plot%22&ages=%22Under%2018%22&main=%22England%22&control=%22none%22&obRange=%5B1992%2C2016%5D&int1yr=1999&pillscare=false&q=0&p=1
+
+Model 2:
+https://andybaxter.shinyapps.io/teen_preg_uk_its/?_inputs_&session=%22Full%20Plot%22&ages=%22Under%2018%22&main=%22England%22&control=%22none%22&obRange=%5B1992%2C2016%5D&int1yr=1999&pillscare=true&q=0&p=1
+
+Model 3:
+https://andybaxter.shinyapps.io/teen_preg_uk_its/?_inputs_&session=%22Full%20Plot%22&ages=%22Under%2018%22&main=%22England%22&control=%22Scotland%22&obRange=%5B1992%2C2016%5D&int1yr=1999&pillscare=true&q=0&p=1&parallel=true
+
+Model 4:
+https://andybaxter.shinyapps.io/teen_preg_uk_its/?_inputs_&session=%22Full%20Plot%22&ages=%22Under%2018%22&main=%22England%22&control=%22Wales%22&obRange=%5B1992%2C2016%5D&int1yr=1999&pillscare=true&q=0&p=1&parallel=true
+
+Model 5:
+https://andybaxter.shinyapps.io/teen_preg_uk_its/?_inputs_&session=%22Full%20Plot%22&ages=%22Under%2018%22&main=%22England%22&control=%22none%22&obRange=%5B1992%2C2016%5D&int1yr=1999&pillscare=true&q=0&p=1&parallel=true&int2yr=2008&int2=true
+
+Model 6:
+https://andybaxter.shinyapps.io/teen_preg_uk_its/?_inputs_&session=%22Full%20Plot%22&ages=%22Under%2018%22&main=%22England%22&control=%22Scotland%22&obRange=%5B1992%2C2016%5D&int1yr=1999&pillscare=true&q=0&p=1&parallel=true&int2yr=2008&int2=true
+
+Model 7:
+https://andybaxter.shinyapps.io/teen_preg_uk_its/?_inputs_&session=%22Full%20Plot%22&ages=%22Under%2018%22&main=%22England%22&control=%22Wales%22&obRange=%5B1992%2C2016%5D&int1yr=1999&pillscare=true&q=0&p=1&parallel=true&int2yr=2008&int2=true
+
+Model 8:
+https://andybaxter.shinyapps.io/teen_preg_uk_its/?_inputs_&session=%22Full%20Plot%22&ages=%22Under%2018%22&main=%22England%20and%20Wales%22&control=%22Scotland%22&obRange=%5B1992%2C2016%5D&int1yr=1999&pillscare=true&q=0&p=1&parallel=true
+
+Model 9:
+https://andybaxter.shinyapps.io/teen_preg_uk_its/?_inputs_&session=%22Full%20Plot%22&ages=%22Under%2016%22&main=%22England%20and%20Wales%22&control=%22Scotland%22&obRange=%5B1994%2C2016%5D&int1yr=1999&pillscare=true&q=0&p=1&parallel=true
+
+Model 10:
+https://andybaxter.shinyapps.io/teen_preg_uk_its/?_inputs_&session=%22Full%20Plot%22&ages=%22Under%2020%22&main=%22England%20and%20Wales%22&control=%22Scotland%22&obRange=%5B1991%2C2016%5D&int1yr=1999&pillscare=true&q=0&p=1&parallel=true

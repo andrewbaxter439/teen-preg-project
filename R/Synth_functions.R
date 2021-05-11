@@ -781,15 +781,15 @@ gg_pre_postMSPE <- function(md, pl){
     summarise(mspe = mean(Gap**2)) %>% 
     spread(period, mspe) %>% 
     mutate(ratio = post/pre,
-           label = ifelse(Country=="England and Wales", paste0("England and Wales; ratio = ", signif(ratio, 3)), NA),
+           label = ifelse(Country=="England and Wales", paste0("England and Wales\nratio = ", signif(ratio, 3)), NA),
            xintercept = ifelse(Country=="England and Wales", ratio, NA))
     
-  df %>% 
-    select(Country, ratio) %>% 
-    arrange(ratio) %>% 
-    ungroup() %>% 
-    mutate(rank = row_number()) %>% 
-    print()
+  # df %>% 
+  #   select(Country, ratio) %>% 
+  #   arrange(ratio) %>% 
+  #   ungroup() %>% 
+  #   mutate(rank = row_number()) %>% 
+  #   print()
     
   p <-  ggplot(df, aes(ratio)) +
     geom_histogram(fill = sphsu_cols("Cobalt"), col = "darkgrey", bins = 60) +
@@ -802,7 +802,8 @@ gg_pre_postMSPE <- function(md, pl){
   
   p <-
     p + geom_text(aes(x = xintercept, label = label),
-                       vjust = -1, hjust = 0, y = Inf, inherit.aes = FALSE) +
+                       vjust = 0, hjust = 0, y = Inf, inherit.aes = FALSE,
+                  nudge_x = 0.05) +
     geom_segment(aes(x = xintercept, xend = xintercept), 
                  y = 0, 
                  yend = Inf,

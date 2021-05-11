@@ -10,16 +10,11 @@ output:
     df_print: !expr DT::datatable
     toc_float:
       collapsed: false
-  #   fig_height: 5
-  #   fig_width: 8
-  #   toc: true
-  #   toc_depth: 2
-  #   number_sections: true
-  # pdf_document:
   # word_document:
   #   fig_height: 4.7
   #   fig_width: 6.1
   #   reference_docx: C:\Users\2286432b\OneDrive - University of Glasgow\Teenage pregnancy - docs in development\ITS and Synth paper files\BMJ Submission documents\Supplementary File.docx
+  # pdf_document:
 always_allow_html: yes
 params:
   save_graphs:
@@ -215,6 +210,7 @@ gr_u18_sp <- gg_synth(md = md_u18_sp, post = TRUE, linesize = 1)
 
 gr_u18_sp #+ labs(title = sPredText(dp_u18_sp))
 
+
 if (params$save_graphs){
   
   ggsave("graphs/Synth-u18-sp.png",
@@ -282,22 +278,26 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/43).
 
 ```{r rank_u18}
-pp_u18_sp <- gg_pre_postMSPE(md_u18_sp, pl_u18_filt) 
+pp_u18_sp <- gg_pre_postMSPE(md_u18_sp, pl_u18_filt) +
+  scale_x_log10(labels = scales::comma_format(accuracy = 1), breaks = c(0,1,10, 100, 1000)) + scale_y_continuous(breaks = c(0,1,2,3)) + theme(plot.margin = unit(c(5.5,12,5.5,5.5), "pt"))
 
 p18 <- ggplot_build(pp_u18_sp)
 
 rank_u18 <- p18$plot$data %>% 
-  arrange(desc(ratio)) %>% 
   ungroup() %>% 
-  mutate(rank = rank(-ratio)) %>% 
-  select(Country, ratio, rank)
+  mutate(Rank = rank(-ratio),
+         `Post/pre MSPE ratio` = round(ratio, 2)) %>% 
+  arrange(Rank) %>% 
+  select(Country, `Post/pre MSPE ratio`, Rank)
+
+kable(rank_u18)
 ```
 
-In placebo-country tests, England and Wales ranked `r rank_u18 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u18)` countries by pre/post-MSPE ratio.
+In placebo-country tests, England and Wales ranked `r rank_u18 %>% filter(Country == "England and Wales") %>% pull(Rank)` out of `r nrow(rank_u18)` countries by pre/post-MSPE ratio.
 
 ```{r pp_u18_sp}
 
-pp_u18_sp+ labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u18_sp + labs(title = "Post/pre-TPS mean squared prediction error") 
 
 ```
 
@@ -486,23 +486,27 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/49).
 
 
-```{r rank_u20, include=FALSE}
-pp_u20_sp <- gg_pre_postMSPE(md_u20_sp, pl_u20_filt) 
+```{r rank_u20}
+pp_u20_sp <- gg_pre_postMSPE(md_u20_sp, pl_u20_filt) +
+  scale_x_log10(labels = scales::comma_format(accuracy = 1), breaks = c(0,1,10, 100, 1000)) + scale_y_continuous(breaks = c(0,1,2,3)) + theme(plot.margin = unit(c(5.5,12,5.5,5.5), "pt"))
 
 p20 <- ggplot_build(pp_u20_sp)
 
 rank_u20 <- p20$plot$data %>% 
-  arrange(desc(ratio)) %>% 
   ungroup() %>% 
-  mutate(rank = rank(-ratio)) %>% 
-  select(Country, ratio, rank)
+  mutate(Rank = rank(-ratio),
+         `Post/pre MSPE ratio` = round(ratio, 2)) %>% 
+  arrange(Rank) %>% 
+  select(Country, `Post/pre MSPE ratio`, Rank)
+
+kable(rank_u20)
 ```
 
-In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
+In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(Rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
 
 ```{r pp_u20_sp}
 
-pp_u20_sp+ labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u20_sp+ labs(title = "Post/pre-TPS mean squared prediction error") 
 
 ```
 
@@ -635,22 +639,26 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/61).
 
 ```{r rank_u18_ns}
-pp_u18_ns <- gg_pre_postMSPE(md_u18_ns, pl_u18_filt)
+pp_u18_ns <- gg_pre_postMSPE(md_u18_ns, pl_u18_ns)+
+  scale_x_log10(labels = scales::comma_format(accuracy = 1), breaks = c(0,1,10, 100, 1000)) + scale_y_continuous(breaks = c(0,1,2,3)) + theme(plot.margin = unit(c(5.5,12,5.5,5.5), "pt"))
 
 p18 <- ggplot_build(pp_u18_ns)
 
 rank_u18 <- p18$plot$data %>% 
-  arrange(desc(ratio)) %>% 
   ungroup() %>% 
-  mutate(rank = rank(-ratio)) %>% 
-  select(Country, ratio, rank)
+  mutate(Rank = rank(-ratio),
+         `Post/pre MSPE ratio` = round(ratio, 2)) %>% 
+  arrange(Rank) %>% 
+  select(Country, `Post/pre MSPE ratio`, Rank)
+
+kable(rank_u18)
 ```
 
-In placebo-country tests, England and Wales ranked `r rank_u18 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u18)` countries by pre/post-MSPE ratio.
+In placebo-country tests, England and Wales ranked `r rank_u18 %>% filter(Country == "England and Wales") %>% pull(Rank)` out of `r nrow(rank_u18)` countries by pre/post-MSPE ratio.
 
 ```{r pp_u18_ns}
 
-pp_u18_ns + labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u18_ns + labs(title = "Post/pre-TPS mean squared prediction error") 
 
 ```
 
@@ -777,22 +785,26 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/102).
 
 ```{r rank_u20_ns}
-pp_u20_ns <- gg_pre_postMSPE(md_u20_ns, pl_u20_ns) 
+pp_u20_ns <- gg_pre_postMSPE(md_u20_ns, pl_u20_ns) +
+  scale_x_log10(labels = scales::comma_format(accuracy = 1), breaks = c(0,1,10, 100, 1000)) + scale_y_continuous(breaks = c(0,1,2,3)) + theme(plot.margin = unit(c(5.5,12,5.5,5.5), "pt"))
 
 p20 <- ggplot_build(pp_u20_ns)
 
 rank_u20 <- p20$plot$data %>% 
-  arrange(desc(ratio)) %>% 
   ungroup() %>% 
-  mutate(rank = rank(-ratio)) %>% 
-  select(Country, ratio, rank)
+  mutate(Rank = rank(-ratio),
+         `Post/pre MSPE ratio` = round(ratio, 2)) %>% 
+  arrange(Rank) %>% 
+  select(Country, `Post/pre MSPE ratio`, Rank)
+
+kable(rank_u20)
 ```
 
-In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
+In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(Rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
 
 ```{r pp_u20_ns}
 
-pp_u20_ns+ labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u20_ns+ labs(title = "Post/pre-TPS mean squared prediction error") 
 
 ```
 ```{r save_u20_ns_pb_nat, include=FALSE}
@@ -921,22 +933,26 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/106).
 
 ```{r rank_u18_all}
-pp_u18_all <- gg_pre_postMSPE(md_u18_all, pl_u18_all) 
+pp_u18_all <- gg_pre_postMSPE(md_u18_all, pl_u18_all) +
+  scale_x_log10(labels = scales::comma_format(accuracy = 1), breaks = c(0,1,10, 100, 1000)) + scale_y_continuous(breaks = c(0,1,2,3)) + theme(plot.margin = unit(c(5.5,12,5.5,5.5), "pt"))
 
 p18 <- ggplot_build(pp_u18_all)
 
 rank_u18 <- p18$plot$data %>% 
-  arrange(desc(ratio)) %>% 
   ungroup() %>% 
-  mutate(rank = rank(-ratio)) %>% 
-  select(Country, ratio, rank)
+  mutate(Rank = rank(-ratio),
+         `Post/pre MSPE ratio` = round(ratio, 2)) %>% 
+  arrange(Rank) %>% 
+  select(Country, `Post/pre MSPE ratio`, Rank)
+
+kable(rank_u18)
 ```
 
-In placebo-country tests, England and Wales ranked `r rank_u18 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u18)` countries by pre/post-MSPE ratio.
+In placebo-country tests, England and Wales ranked `r rank_u18 %>% filter(Country == "England and Wales") %>% pull(Rank)` out of `r nrow(rank_u18)` countries by pre/post-MSPE ratio.
 
 ```{r pp_u18_all}
 
-pp_u18_all+ labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u18_all+ labs(title = "Post/pre-TPS mean squared prediction error") 
 
 ```
 
@@ -1013,18 +1029,22 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/100).
 
 ```{r rank_u20_all}
-pp_u20_all <- gg_pre_postMSPE(md_u20_all, pl_u20_all) 
+pp_u20_all <- gg_pre_postMSPE(md_u20_all, pl_u20_all) +
+  scale_x_log10(labels = scales::comma_format(accuracy = 1), breaks = c(0,1,10, 100, 1000)) + scale_y_continuous(breaks = c(0,1,2,3)) + theme(plot.margin = unit(c(5.5,12,5.5,5.5), "pt"))
 
 p20 <- ggplot_build(pp_u20_all)
 
 rank_u20 <- p20$plot$data %>% 
-  arrange(desc(ratio)) %>% 
   ungroup() %>% 
-  mutate(rank = rank(-ratio)) %>% 
-  select(Country, ratio, rank)
+  mutate(Rank = rank(-ratio),
+         `Post/pre MSPE ratio` = round(ratio, 2)) %>% 
+  arrange(Rank) %>% 
+  select(Country, `Post/pre MSPE ratio`, Rank)
+
+kable(rank_u20)
 ```
 
-In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
+In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(Rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
 
 ```{r pp_u20_all}
 

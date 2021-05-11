@@ -110,6 +110,39 @@ u20_right[["layers"]][[3]][["aes_params"]]$size <- 1
 
 ggsave("graphs/u20_all.png", dpi = 400, width = 155, height = 85, units = "mm")
 
+# joint graphs for poster of primary models -------------------------------
+
+u18_left <- gr_u18_sp
+u18_right <- pb_plot_u18_sp
+
+u18_left[["layers"]][[1]][["aes_params"]]$size <- 1
+u18_right[["layers"]][[3]][["aes_params"]]$size <- 1
+
+
+((u18_left + u18_right) & 
+    theme(legend.position = "bottom")) / 
+  guide_area() + 
+  plot_layout(guides = 'collect',
+              width = 155,
+              heights = c(80, 5),
+              )
+
+ggsave("graphs/u18_sp.svg", dpi = 400, width = 240, height = 90, units = "mm")
+
+u20_left <- gr_u20_sp
+u20_right <- pb_plot_u20_sp
+u20_left[["layers"]][[1]][["aes_params"]]$size <- 1
+u20_right[["layers"]][[3]][["aes_params"]]$size <- 1
+
+((u20_left + u20_right) & 
+    theme(legend.position = "bottom")) / 
+  guide_area() + 
+  plot_layout(guides = 'collect',
+              width = 155,
+              heights = c(80, 5)
+              )
+
+ggsave("graphs/u20_sp.svg", dpi = 400, width = 240, height = 90, units = "mm")
 
 # comparing UK to other countries -----------------------------------------
 

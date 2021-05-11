@@ -574,7 +574,7 @@ all_rates %>%
   ) +
   scale_fill_brewer(palette = 'Dark2') +
   geom_segment(data = tibble(
-    Year = c(1996, 1999, 2007),
+    Year = c(1996, 1999, 2008),
     label = c("'Pill scare'", "Strategy launch", "Common Shock")
   ),
   aes(x = Year, xend = Year, y = 0, yend = 72),
@@ -582,7 +582,7 @@ all_rates %>%
   colour = "grey",
   size = 1,
   inherit.aes = FALSE) +
-  geom_point(shape = 3) +
+  # geom_point(shape = 3) +
   geom_line() +
   ylab(paste0("Rate of pregnancies per 1,000 women")) +
   xlab("Year") +
@@ -619,8 +619,8 @@ all_rates %>%
         plot.margin = unit(c(1,0,0,0), "cm")) +
   geom_text(
     data = tibble(
-      Year = c(1996, 1999, 2007),
-      label = c("1996 'Pill scare'", "1999 Strategy launch", "2007 Common Shock")
+      Year = c(1996, 1999, 2008),
+      label = c("1996 'Pill scare'", "1999 Strategy launch", "2008 Common Shock")
     ),
     aes(x = Year, y = 74, label = label),
     inherit.aes = FALSE,
@@ -660,7 +660,7 @@ all_rates %>%
     # size = 1
   ) +
   geom_segment(data = tibble(
-    Year = c(1996, 1999, 2007),
+    Year = c(1996, 1999, 2008),
     label = c("'Pill scare'", "Strategy launch", "Common Shock")
   ),
   aes(x = Year, xend = Year, y = 0, yend = 74),
@@ -668,7 +668,7 @@ all_rates %>%
   colour = "grey",
   size = 1,
   inherit.aes = FALSE) +
-  geom_point(shape = 3) +
+  # geom_point(shape = 3) +
   geom_line() +
   ylab(paste0("Rate of pregnancies per 1,000 women")) +
   xlab("Year") +
@@ -707,8 +707,8 @@ all_rates %>%
         plot.margin = unit(c(1,0,0,0), "cm")) +
   geom_text(
     data = tibble(
-      Year = c(1996, 1999, 2007),
-      label = c("1996 'Pill scare'", "1999 Strategy launch", "2007 Common Shock")
+      Year = c(1996, 1999, 2008),
+      label = c("1996 'Pill scare'", "1999 Strategy launch", "2008 Common Shock")
     ),
     aes(x = Year, y = 76, label = label),
     inherit.aes = FALSE,

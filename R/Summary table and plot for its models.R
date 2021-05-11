@@ -140,18 +140,20 @@ forest1 <- all_tidy_df %>%
   geom_vline(xintercept = 0, colour = "darkgrey", size = 1) +
   geom_point(size = 3, shape = 'diamond') +
   geom_linerange(aes(xmin = `Lower 95% CI`, xmax = `Upper 95% CI`)) +
-  theme(panel.grid.major.y = element_blank(),
-        panel.spacing.y = unit(1, "cm"),
-        axis.ticks.y = element_blank(),
-        axis.text.y = element_blank(),
-        axis.line.y = element_blank(),
-        axis.title.y = element_blank(), 
-        panel.background=element_rect(colour = "lightblue"),
-        strip.background.y = element_blank(),
-        plot.margin = margin(l = 0, r = 0),
-        strip.text = element_blank(),
-        plot.title = element_text(size = 10),
-        strip.placement = "outside") +
+  theme(
+    strip.text = element_blank(),
+    panel.spacing.y = unit(1, "cm"),
+    plot.margin = margin(l = 0, r = 0),
+    panel.grid.major.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.line.y = element_blank(),
+    axis.title.y = element_blank(),
+    # panel.background = element_rect(colour = "lightblue"),
+    strip.background.y = element_blank(),
+    plot.title = element_text(size = 10),
+    strip.placement = "outside"
+  )+
   facet_grid(facet ~ .,
              scales = "free",
              space = "free_y",
@@ -167,20 +169,24 @@ base_plot <- all_tidy_df %>%
              scales = "free",
              space = "free_y",
              switch = "y") +
-  theme(strip.text = element_blank(),
-        panel.spacing.y = unit(1, "cm"),
-        plot.margin = margin(l = 0, r = 0),
-        axis.line=element_blank(),
-        axis.text.y=element_blank(),
-        axis.ticks=element_line(colour = "white"),
-        axis.line.x=element_line(colour = "white"),#
-        axis.text.x=element_text(color="white"),
-        ## need text to be printed so it stays aligned with figure but white so it's invisible
-        axis.title.y=element_blank(),legend.position="none",
-        panel.background=element_rect(colour = "lightblue"),
-        panel.border=element_blank(),panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(),plot.background=element_blank(),
-        plot.title = element_text(size = 10, hjust = 0)) +
+  theme(
+    strip.text = element_blank(),
+    panel.spacing.y = unit(1, "cm"),
+    plot.margin = margin(l = 0, r = 0),
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank(),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    # axis.line.x = element_line(colour = "white"),
+    axis.text.x = element_text(color = "white", size = 12),
+    ## need text to be printed so it stays aligned with figure but white so it's invisible
+    legend.position = "none",
+    # panel.background = element_rect(colour = "lightblue", fill = "white"),
+    # panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(size = 10, hjust = 0)
+  )+
   coord_cartesian(clip = "off") +
     scale_x_continuous(expand = expansion(add = c(0,0)), limits = c(0,2))
 
