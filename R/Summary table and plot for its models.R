@@ -132,7 +132,6 @@ all_tidy_df <- tidied_results %>%
   )
 
 draw_forest_table <- function(coefficient = "Trend", data = all_tidy_df) {
-  
 
 forest1 <- all_tidy_df %>% 
   filter(Coefficient == coefficient) %>% 
@@ -158,6 +157,7 @@ forest1 <- all_tidy_df %>%
              scales = "free",
              space = "free_y",
              switch = "y") +
+  # scale_x_continuous(limits = c(-4, 6)) +
   ggtitle(" \n ")
 
 base_plot <- all_tidy_df %>% 

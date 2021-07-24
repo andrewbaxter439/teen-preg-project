@@ -820,6 +820,104 @@ gg_pre_postMSPE <- function(md, pl){
 }
 
 
+gg_pre_postMSPE_tab <- function(md, pl) {
+  
+  df <- md %>% 
+    spread(Group, Rate) %>% 
+    mutate(Gap = Treated - Synthetic,
+           Country = "England and Wales") %>% 
+    select(Year, Country, Gap) %>% 
+    bind_rows(pl %>% select(Year, Country, Gap)) %>% 
+    mutate(period = ifelse(Year<1999, "pre", "post")) %>% 
+    group_by(Country, period) %>% 
+    summarise(mspe = mean(Gap**2)) %>% 
+    spread(period, mspe) %>% 
+    mutate(ratio = post/pre)
+  
+  df_tidy <- df %>% 
+    ungroup() %>% 
+    mutate(rank = rank(-ratio),
+           Country = fct_reorder(factor(Country), ratio),
+           ratio_lab = str_pad(str_replace(as.character(round(ratio, 2)), "(\\.\\d)$", "\\10"), 6, side = "left"),
+           EngWa = ifelse(Country == "England and Wales", "E", "C")) %>% 
+    arrange(rank) %>% 
+    select(Country, ratio, ratio_lab, rank, EngWa)
+  
+  
+  points_plot <- ggplot(df_tidy, aes(ratio, Country, colour = EngWa)) +
+    geom_point(size = 3, shape = 'diamond') +
+    scale_x_continuous("Post/pre-MSPE ratio") +
+    ggtitle(" ") +
+    theme(axis.line.y = element_blank(),
+          axis.title.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          panel.background = element_blank(),
+          panel.grid.major = element_line(colour = "#e0e0e0"),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "#666666"),
+          strip.text = element_blank(),
+          panel.spacing.y = unit(1, "cm"),
+          plot.margin = margin(l = 0, r = 0),
+          panel.grid.major.y = element_blank(),
+          plot.title = element_text(size = 12),
+          legend.position = "none"
+    ) +
+    scale_colour_manual(values = c("E" = sphsu_cols("University blue", names = FALSE), "C" = "darkgrey"))
+  
+  base_plot <- df_tidy %>% 
+    ggplot(aes(x = 0, y = Country, colour = EngWa, fontface = ifelse(EngWa == "E", "bold", "plain"))) +
+    ylab(NULL) +
+    xlab(" ") +
+    theme(
+      strip.text = element_blank(),
+      plot.margin = margin(l = 0, r = 0),
+      axis.text.y = element_blank(),
+      axis.title.y = element_blank(),
+      axis.line = element_blank(),
+      axis.ticks = element_blank(),
+      axis.text.x = element_text(color = "white"),
+      panel.background = element_blank(),
+      ## need text to be printed so it stays aligned with figure but white so it's invisible
+      legend.position = "none",
+      # panel.background = element_rect(colour = "lightblue", fill = "white"),
+      # panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      plot.title = element_text(size = 12, hjust = 0)
+    ) +
+    coord_cartesian(clip = "off") +
+    scale_x_continuous(expand = expansion(add = c(0,0)), limits = c(0,2)) +
+    scale_colour_manual(values = c("E" = sphsu_cols("University blue", names = FALSE), "C" = "black"))
+  
+  c_plot <- base_plot + 
+    geom_text(aes(label = Country), hjust = 0, size = pts(9)) +
+    ggtitle("Country") +
+    theme(strip.text = element_text(colour = "black"),
+          strip.background = element_blank(),
+          strip.placement = "outside" )
+  
+  
+  rank_plot <- base_plot + 
+    geom_text(aes(label = rank), hjust = 0, size = pts(9)) +
+    ggtitle("Rank") +
+    theme(strip.text = element_text(colour = "black"),
+          strip.background = element_blank(),
+          strip.placement = "outside" )
+  
+  rat_plot <- base_plot + 
+    geom_text(aes(x = Inf, label = ratio_lab), hjust = 1, size = pts(9)) +
+    ggtitle("Ratio") +
+    theme(strip.text = element_text(colour = "black"),
+          strip.background = element_blank(),
+          strip.placement = "outside",
+          plot.title = element_text(size = 12, hjust = 1))
+  
+  grid.arrange(c_plot, rank_plot, rat_plot, points_plot,
+                                 layout_matrix = matrix(c(1,1,1,1,1,1,2, 2,3,3, 4, 4,4,4,4,4,4,4,4,4,4,4), nrow = 1))
+  
+}
+
 # iterating through removal of top-weighted countries --------------------------------------------------------
 gg_iterateCountries <- function(itco, jitter = FALSE, n = 10, float_labs = FALSE) {
   
