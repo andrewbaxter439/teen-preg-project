@@ -2,97 +2,126 @@
 # so = synth.res (output from `synth` function)
 # dp = dataprep.res (output from `dataprep` function)
 
-gg_synth <- function(dp = NULL, md = NULL, yr = 1999, post = FALSE, mspe = NULL, mspeOptim = FALSE) {
-  require(dplyr)
-  require(SPHSUgraphs)
-  require(Synth)
-  
-  
-  if ((is.null(dp)&&is.null(md))|(!is.null(dp)&&!is.null(md)))
-    stop("Please enter either dataprep object or model")
-  
-  if (is.null(md)&&!is.null(dp)) {
+gg_synth <-
+  function(dp = NULL,
+           md = NULL,
+           yr = 1999,
+           post = FALSE,
+           mspe = NULL,
+           mspeOptim = FALSE,
+           linesize = 1) {
+    require(dplyr)
+    require(SPHSUgraphs)
+    require(Synth)
     
-    agegrp <- gsub("^.*(\\d{2}).*$","\\1", deparse(substitute(dp)))
-    so <- synth(dp)
+    
+    if ((is.null(dp) && is.null(md)) | (!is.null(dp) && !is.null(md)))
+      stop("Please enter either dataprep object or model")
+    
+    if (is.null(md) && !is.null(dp)) {
+      agegrp <- gsub("^.*(\\d{2}).*$", "\\1", deparse(substitute(dp)))
+      so <- synth(dp)
+      synthC <- dp$Y0 %*% so$solution.w
+      
+      md <-
+        tibble(
+          Year = as.numeric(rownames(dp$Y1)),
+          Treated = dp$Y1[, 1],
+          Synthetic = synthC[, 1]
+        ) %>%
+        gather("Group", "Rate",-1)
+      if (is.null(mspe) & mspeOptim) {
+        mspe <- so$loss.v[1]
+      }
+    } else {
+      agegrp <- gsub("^.*(\\d{2}).*$", "\\1", deparse(substitute(md)))
+    }
+    
+    if (post) {
+      xmax = NA
+    } else {
+      xmax = yr
+      md <- md %>% filter(Year < yr)
+    }
+    
+    if (is.null(mspe) & mspeOptim) {
+      stop(
+        "Please enter mspe for the synth output, or change mspeOptim to 'FALSE' to calculate from whole pre-intervention period."
+      )
+    }
+    
+    if (!is.null(mspe)) {
+      mspe <- signif(mspe, 3)
+    } else {
+      mspe <- pre_MSPE(md)
+    }
+    
+    
+    plot <-
+      ggplot(md, aes(Year, Rate, col = Group)) +  # no linetype change
+      # plot <-  ggplot(md, aes(Year, Rate, col = Group, linetype = Group)) +
+      geom_line(size = linesize) +
+      theme_sphsu_light() +
+      ylab(paste0("Under-", agegrp, " rate (per 1,000 women)")) +
+      theme(
+        legend.title = element_blank(),
+        panel.grid.major = element_line(colour = "#e0e0e0"),
+        panel.grid.minor = element_blank(),
+        # line = element_blank()
+      ) +
+      # scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +  # no linetype change
+      scale_colour_manual(
+        name = "Data",
+        breaks = c("Treated", "Synthetic"),
+        labels = c("England and Wales", "Synthetic"),
+        values = c(
+          "Synthetic" = sphsu_cols("Turquoise", names = FALSE),
+          "Treated" = sphsu_cols("Thistle", names = FALSE)
+        )
+      ) +
+      # scale_colour_manual(name = "Data", labels = c("England and Wales", "Synthetic"), values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
+      geom_vline(xintercept = 1998.5, linetype = "dotted") +
+      scale_x_continuous(limits = c(NA, xmax)) +
+      scale_y_continuous(limits = c(0, NA)) +
+      labs(subtitle = paste0("Pre-intervention MSPE = ", mspe))
+    
+    return(plot)
+    
+  }
+
+predvalues_synth <-
+  function(dp,
+           synth_outputs = TRUE,
+           yr = 1999,
+           ...) {
+    require(dplyr)
+    require(Synth)
+    
+    so <- synth(dp, ...)
     synthC <- dp$Y0 %*% so$solution.w
     
-    md <- tibble(Year = as.numeric(rownames(dp$Y1)), Treated = dp$Y1[,1], Synthetic = synthC[,1]) %>% 
-      gather("Group", "Rate", -1)
-    if (is.null(mspe) & mspeOptim){
-      mspe <- so$loss.v[1]
+    if (synth_outputs) {
+      so_name <- gsub("^[a-z]+_(.*$)", "so_\\1", deparse(substitute(dp)))
+      st_name <-
+        gsub("^[a-z]+_(.*$)", "st_\\1", deparse(substitute(dp)))
+      print(paste("outputting", so_name, "and", st_name))
+      st <- synth.tab(so, dp)
+      
+      assign(so_name, so, envir = .GlobalEnv)
+      assign(st_name, st, envir = .GlobalEnv)
     }
-  } else {
     
-    agegrp <- gsub("^.*(\\d{2}).*$","\\1", deparse(substitute(md)))
-  }
-  
-  if(post){
-    xmax = NA
-  } else {
-    xmax = yr
-    md <- md %>% filter(Year<yr)
-  }
-  
-  if(is.null(mspe) & mspeOptim) {
-    stop("Please enter mspe for the synth output, or change mspeOptim to 'FALSE' to calculate from whole pre-intervention period.")
-  }
-  
-  if(!is.null(mspe)){
-    mspe <- signif(mspe, 3)
-  } else {
-    mspe <- pre_MSPE(md)
-  }
-  
-  
-  plot <-  ggplot(md, aes(Year, Rate, col = Group)) +  # no linetype change
-    # plot <-  ggplot(md, aes(Year, Rate, col = Group, linetype = Group)) +
-    geom_line(size = 2) +
-    theme_sphsu_light() +
-    ylab(paste0("Under-", agegrp, " rate (per 1,000 women)")) +
-    theme(legend.title = element_blank(),
-          panel.grid.major = element_line(colour = "#e0e0e0"),
-          panel.grid.minor = element_blank(),
-          # line = element_blank()
-          ) +
-    # scale_linetype_manual(name = "Data", values = c("Synthetic" = "dashed", "Treated" = "solid")) +  # no linetype change
-    scale_colour_manual(name = "Data", 
-                        breaks = c("Treated", "Synthetic"),
-                        labels = c("England and Wales", "Synthetic"), 
-                        values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
-    # scale_colour_manual(name = "Data", labels = c("England and Wales", "Synthetic"), values = c("Synthetic" = sphsu_cols("Turquoise", names = FALSE), "Treated" = sphsu_cols("Thistle", names = FALSE))) +
-    geom_vline(xintercept = 1998.5, linetype = "dotted") +
-    scale_x_continuous(limits = c(NA, xmax)) +
-    scale_y_continuous(limits = c(0, NA)) +
-    labs(subtitle = paste0("Pre-intervention MSPE = ", mspe))
-  
-  return(plot)
-  
-}
-
-predvalues_synth <- function(dp, synth_outputs = TRUE, yr = 1999, ...) {
-  require(dplyr)
-  require(Synth)
-  
-  so <- synth(dp, ...)
-  synthC <- dp$Y0 %*% so$solution.w
-  
-  if (synth_outputs){
-    so_name <- gsub("^[a-z]+_(.*$)", "so_\\1", deparse(substitute(dp)))
-    st_name <- gsub("^[a-z]+_(.*$)", "st_\\1", deparse(substitute(dp)))
-    print(paste("outputting", so_name, "and", st_name))
-    st <- synth.tab(so, dp)
+    df <-
+      tibble(
+        Year = as.numeric(rownames(dp$Y1)),
+        Treated = dp$Y1[, 1],
+        Synthetic = synthC[, 1]
+      ) %>%
+      gather("Group", "Rate",-1)
     
-    assign(so_name, so, envir = .GlobalEnv)
-    assign(st_name, st, envir = .GlobalEnv)
+    return(df)
+    
   }
-  
-  df <- tibble(Year = as.numeric(rownames(dp$Y1)), Treated = dp$Y1[,1], Synthetic = synthC[,1]) %>% 
-    gather("Group", "Rate", -1)
-  
-  return(df)
-  
-}
 
 printCoefficients <- function(md = NULL, model = NULL){
   
@@ -184,14 +213,25 @@ generatePlacebos <- function(data,
   return(placebos)
 }
 
-pre_MSPE <- function (md){
+pre_MSPE <- function (md) {
   md %>%
-    filter(Year < 1999) %>% 
-    spread(Group, Rate) %>% 
-    mutate(SPE = (Treated - Synthetic)**2) %>% 
-    summarise(MSPE = mean(SPE)) %>% 
-    pull() %>% 
+    filter(Year < 1999) %>%
+    spread(Group, Rate) %>%
+    mutate(SPE = (Treated - Synthetic) ** 2) %>%
+    summarise(MSPE = mean(SPE)) %>%
+    pull() %>%
     signif(3)
+}
+
+pre_corr <- function (md) {
+  
+  ps <- md %>%
+    filter(Year < 1999) %>%
+    pivot_wider(names_from = "Group", values_from = "Rate") %>%
+    select(-Year)
+  
+  cor(ps$Treated, ps$Synthetic) ^ 2
+  
 }
 
 sPredText <- function(dp) {
@@ -741,15 +781,15 @@ gg_pre_postMSPE <- function(md, pl){
     summarise(mspe = mean(Gap**2)) %>% 
     spread(period, mspe) %>% 
     mutate(ratio = post/pre,
-           label = ifelse(Country=="England and Wales", paste0("England and Wales; ratio = ", signif(ratio, 3)), NA),
+           label = ifelse(Country=="England and Wales", paste0("England and Wales\nratio = ", signif(ratio, 3)), NA),
            xintercept = ifelse(Country=="England and Wales", ratio, NA))
     
-  df %>% 
-    select(Country, ratio) %>% 
-    arrange(ratio) %>% 
-    ungroup() %>% 
-    mutate(rank = row_number()) %>% 
-    print()
+  # df %>% 
+  #   select(Country, ratio) %>% 
+  #   arrange(ratio) %>% 
+  #   ungroup() %>% 
+  #   mutate(rank = row_number()) %>% 
+  #   print()
     
   p <-  ggplot(df, aes(ratio)) +
     geom_histogram(fill = sphsu_cols("Cobalt"), col = "darkgrey", bins = 60) +
@@ -760,13 +800,123 @@ gg_pre_postMSPE <- function(md, pl){
   
   ytop <- max(ggp[["data"]][[1]][["count"]])
   
-  p <-   p + geom_text(aes(x = xintercept, label = label),vjust = 0, hjust = 0, y = ytop + 0.1, inherit.aes = FALSE) +
-    geom_segment(aes(x = xintercept, xend = xintercept), y = 0, yend = ytop, inherit.aes = FALSE) +
-    ylim(0, ytop + 0.25)
+  p <-
+    p + geom_text(aes(x = xintercept, label = label),
+                       vjust = 0, hjust = 0, y = Inf, inherit.aes = FALSE,
+                  nudge_x = 0.05) +
+    geom_segment(aes(x = xintercept, xend = xintercept), 
+                 y = 0, 
+                 yend = Inf,
+                 inherit.aes = FALSE) +
+    scale_y_continuous(expand = expansion(add = c(0, 0.5))) +
+      coord_cartesian(clip = "off") +
+      theme(
+         plot.title = element_text(margin = margin(b = 1, unit = "cm")),
+         plot.margin = margin(1, unit = "cm")
+            )
+      
   
   return(p)
 }
 
+
+gg_pre_postMSPE_tab <- function(md, pl) {
+  
+  df <- md %>% 
+    spread(Group, Rate) %>% 
+    mutate(Gap = Treated - Synthetic,
+           Country = "England and Wales") %>% 
+    select(Year, Country, Gap) %>% 
+    bind_rows(pl %>% select(Year, Country, Gap)) %>% 
+    mutate(period = ifelse(Year<1999, "pre", "post")) %>% 
+    group_by(Country, period) %>% 
+    summarise(mspe = mean(Gap**2)) %>% 
+    spread(period, mspe) %>% 
+    mutate(ratio = post/pre)
+  
+  df_tidy <- df %>% 
+    ungroup() %>% 
+    mutate(rank = rank(-ratio),
+           Country = fct_reorder(factor(Country), ratio),
+           ratio_lab = str_pad(str_replace(as.character(round(ratio, 2)), "(\\.\\d)$", "\\10"), 6, side = "left"),
+           EngWa = ifelse(Country == "England and Wales", "E", "C")) %>% 
+    arrange(rank) %>% 
+    select(Country, ratio, ratio_lab, rank, EngWa)
+  
+  
+  points_plot <- ggplot(df_tidy, aes(ratio, Country, colour = EngWa)) +
+    geom_point(size = 3, shape = 'diamond') +
+    scale_x_continuous("Post/pre-MSPE ratio") +
+    ggtitle(" ") +
+    theme(axis.line.y = element_blank(),
+          axis.title.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          panel.background = element_blank(),
+          panel.grid.major = element_line(colour = "#e0e0e0"),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "#666666"),
+          strip.text = element_blank(),
+          panel.spacing.y = unit(1, "cm"),
+          plot.margin = margin(l = 0, r = 0),
+          panel.grid.major.y = element_blank(),
+          plot.title = element_text(size = 12),
+          legend.position = "none"
+    ) +
+    scale_colour_manual(values = c("E" = sphsu_cols("University blue", names = FALSE), "C" = "darkgrey"))
+  
+  base_plot <- df_tidy %>% 
+    ggplot(aes(x = 0, y = Country, colour = EngWa, fontface = ifelse(EngWa == "E", "bold", "plain"))) +
+    ylab(NULL) +
+    xlab(" ") +
+    theme(
+      strip.text = element_blank(),
+      plot.margin = margin(l = 0, r = 0),
+      axis.text.y = element_blank(),
+      axis.title.y = element_blank(),
+      axis.line = element_blank(),
+      axis.ticks = element_blank(),
+      axis.text.x = element_text(color = "white"),
+      panel.background = element_blank(),
+      ## need text to be printed so it stays aligned with figure but white so it's invisible
+      legend.position = "none",
+      # panel.background = element_rect(colour = "lightblue", fill = "white"),
+      # panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      plot.title = element_text(size = 12, hjust = 0)
+    ) +
+    coord_cartesian(clip = "off") +
+    scale_x_continuous(expand = expansion(add = c(0,0)), limits = c(0,2)) +
+    scale_colour_manual(values = c("E" = sphsu_cols("University blue", names = FALSE), "C" = "black"))
+  
+  c_plot <- base_plot + 
+    geom_text(aes(label = Country), hjust = 0, size = pts(9)) +
+    ggtitle("Country") +
+    theme(strip.text = element_text(colour = "black"),
+          strip.background = element_blank(),
+          strip.placement = "outside" )
+  
+  
+  rank_plot <- base_plot + 
+    geom_text(aes(label = rank), hjust = 0, size = pts(9)) +
+    ggtitle("Rank") +
+    theme(strip.text = element_text(colour = "black"),
+          strip.background = element_blank(),
+          strip.placement = "outside" )
+  
+  rat_plot <- base_plot + 
+    geom_text(aes(x = Inf, label = ratio_lab), hjust = 1, size = pts(9)) +
+    ggtitle("Ratio") +
+    theme(strip.text = element_text(colour = "black"),
+          strip.background = element_blank(),
+          strip.placement = "outside",
+          plot.title = element_text(size = 12, hjust = 1))
+  
+  grid.arrange(c_plot, rank_plot, rat_plot, points_plot,
+                                 layout_matrix = matrix(c(1,1,1,1,1,1,2, 2,3,3, 4, 4,4,4,4,4,4,4,4,4,4,4), nrow = 1))
+  
+}
 
 # iterating through removal of top-weighted countries --------------------------------------------------------
 gg_iterateCountries <- function(itco, jitter = FALSE, n = 10, float_labs = FALSE) {

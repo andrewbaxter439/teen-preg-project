@@ -3,22 +3,18 @@ title: "Synth reporting"
 author: "Andrew Baxter"
 date: "`r Sys.Date()`"
 output: 
-  # pdf_document:
-  #   fig_height: 5
-  #   fig_width: 8
-  #   toc: true
-  #   toc_depth: 2
-  #   number_sections: true
   html_document:
     toc: true
     toc_depth: 2
     number_sections: true
+    df_print: !expr DT::datatable
     toc_float:
       collapsed: false
   # word_document:
   #   fig_height: 4.7
   #   fig_width: 6.1
   #   reference_docx: C:\Users\2286432b\OneDrive - University of Glasgow\Teenage pregnancy - docs in development\ITS and Synth paper files\BMJ Submission documents\Supplementary File.docx
+  # pdf_document:
 always_allow_html: yes
 params:
   save_graphs:
@@ -47,6 +43,9 @@ knitr::opts_chunk$set(
   warning = FALSE,
   out.width = "100%"
 )
+
+options(DT.options = list(rownames = FALSE))
+
 library(readxl)
 library(tidyverse)
 library(stringr)
@@ -61,6 +60,7 @@ library(plotly)
 library(knitr)
 library(gganimate)
 library(ggrepel)
+library(gridExtra)
 library(patchwork)
 
 load('Data/synth_data_c.rdata') # outputted from 'Synth_data.R'
@@ -71,6 +71,9 @@ load("Data/time_placebos_b.rdata")  # outputted from 'Synth_time_pbs.R'
 # load('Data/noScot.rdata')
 load("Data/other_predictors.rdata")
 source('R/Synth_functions.R')
+
+synthData_u20_filt[synthData_u20_filt$Country=="New Zealand","rate"] <- 
+  synthData_u18_filt[synthData_u18_filt$Country=="New Zealand","rate"]
 ```
 ```{r results='asis'}
 cat("
@@ -87,17 +90,28 @@ caption {
 
 # Setting up data
 
+## Under-18 birth rates
+
 Data from Human Mortality Database and Human Fertility Database was used to calculate birth rates. This was tidied to give Under-18 rates:
 
 ```{r tidy_u18}
-kable(head(synthData_u18_filt %>% mutate_if(is.numeric, ~ round(.,2))))
+DT::datatable(synthData_u18_filt %>% mutate_if(is.numeric, ~ round(.,2)), rownames = FALSE)
 ```
+Data available to [download here](http://phd.andybaxter.me/data/under-18-birth-rates.csv).
+
+<button class = "btn btn-primary" name="button" onclick="http://phd.andybaxter.me/data/under-18-birth-rates.csv">`r shiny::icon('download', class = "light" ,lib = "font-awesome")` Download data (csv)</button>
+
+## Under-20 pregnancy rates
 
 Abortion estimates were added to give Under-20 rates:
 
 ```{r tidy_u_19}
-kable(head(synthData_u20_filt %>% mutate_if(is.numeric, ~ round(.,2))))
+DT::datatable(synthData_u20_filt %>% mutate_if(is.numeric, ~ round(.,2)), rownames = FALSE)
 ```
+
+Data available to [download here](http://phd.andybaxter.me/data/under-20-pregnancy-rates.csv).
+
+<button class = "btn btn-primary" name="button" onclick="http://phd.andybaxter.me/data/under-20-pregnancy-rates.csv">`r shiny::icon('download', class = "light" ,lib = "font-awesome")` Download data (csv)</button>
 
 # Iterating through year combinations
 
@@ -107,7 +121,7 @@ For each comparison, I iterated through all combinations of years as special pre
 it_u18_sp <- testSynthIterations(
   yrs = 1990:1998,
   pred = "rate",
-  data = synthData_u18[,1:4],
+  data = synthData_u18_filt[,1:4],
   ccodes = u_18_ccodes,
   n = 4,
   predictors = NULL,
@@ -184,15 +198,19 @@ synthPrep(synthData_u18_filt,
           time.predictors.prior = opt_y1:1998,
           time.plot = opt_y1:2013
 )
+
+md_curr <- md_u18_sp
+
 ```
 
 Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(md_u18_sp, "under 18")$tot_diff` births (to an average population of `r rateDiff(md_u18_sp, "under 18")$mean_pop` women).
 
 ```{r md_u18_sp_graph}
-gr_u18_sp <- gg_synth(md = md_u18_sp, post = TRUE) 
+gr_u18_sp <- gg_synth(md = md_u18_sp, post = TRUE, linesize = 1) 
 
 
 gr_u18_sp #+ labs(title = sPredText(dp_u18_sp))
+
 
 if (params$save_graphs){
   
@@ -206,6 +224,14 @@ if (params$save_graphs){
 }
 
 ```
+
+```{r include=FALSE}
+mspe_curr <- pre_MSPE(md_curr)
+# ave_pop_curr <- 
+rsq_curr <- pre_corr(md_curr)
+```
+
+The MSPE across the pre-intervention period was `r mspe_curr`, (an average error of `r signif(sqrt(mspe_curr), 3)`) and the synthetic predictor was able to account for `r round(rsq_curr, 3)*100`% of the variance (R^2^ = `r round(rsq_curr, 3)`).
 
 ### Weights and balance
 
@@ -253,32 +279,34 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/43).
 
 ```{r rank_u18}
-pp_u18_sp <- gg_pre_postMSPE(md_u18_sp, pl_u18_filt) + labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u18_sp <- gg_pre_postMSPE(md_u18_sp, pl_u18_filt) +
+  scale_x_log10(labels = scales::comma_format(accuracy = 1), breaks = c(0,1,10, 100, 1000)) + scale_y_continuous(breaks = c(0,1,2,3)) + theme(plot.margin = unit(c(5.5,12,5.5,5.5), "pt"))
 
 p18 <- ggplot_build(pp_u18_sp)
 
 rank_u18 <- p18$plot$data %>% 
-  arrange(desc(ratio)) %>% 
   ungroup() %>% 
-  mutate(rank = rank(-ratio)) %>% 
-  select(Country, ratio, rank)
+  mutate(Rank = rank(-ratio),
+         `Post/pre MSPE ratio` = round(ratio, 2)) %>% 
+  arrange(Rank) %>% 
+  select(Country, `Post/pre MSPE ratio`, Rank)
+
+kable(rank_u18)
 ```
 
-In placebo-country tests, England and Wales ranked `r rank_u18 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u18)` countries by pre/post-MSPE ratio.
+In placebo-country tests, England and Wales ranked `r rank_u18 %>% filter(Country == "England and Wales") %>% pull(Rank)` out of `r nrow(rank_u18)` countries by pre/post-MSPE ratio.
 
 ```{r pp_u18_sp}
 
-pp_u18_sp
+# + labs(title = "Post/pre-TPS mean squared prediction error") 
+pp_u18_sp <- gg_pre_postMSPE_tab(md_u18_sp, pl_u18_filt)
 
 ```
 
 ```{r save_u18_pb_nat, include=FALSE}
 if (params$save_graphs){ggsave(
-  plot = pp_u18_sp +
-    theme(title = element_text(size = 14),
-          axis.title = element_text(size = 12),
-          legend.position = "none"),
-  dpi = 400, "graphs/Synth-u18-sp-pp-ratio.png", width = 155, height = 100, units = "mm"
+  plot = pp_u18_sp,
+  dpi = 400, "graphs/Synth-u18-sp-pp-ratio.png", width = 155, height = 120, units = "mm"
 )}
 if (params$save_graphs){ggsave(
   plot = pb_plot_u18_sp +
@@ -377,19 +405,22 @@ gr_u20_rates
 ### England vs Synthetic Control
 ```{r u20_sp, include = FALSE}
 opt_y1 <- 1990
-synthData_u20_filt[synthData_u20_filt$Country=="New Zealand","rate"] <- 
-  synthData_u18_filt[synthData_u18_filt$Country=="New Zealand","rate"]
+
 
 # dataprep and synth
 synthPrep(synthData_u20_filt[,1:5],
           "u20_sp",
           dependent = "pRate",
+          # predictors = "pRate",
           special.predictors = sp_u20_filt,
           # special.predictors = append(sp_u20_filt, sp_u18_filt),
           time.optimise.ssr = opt_y1:1998,
           time.predictors.prior = opt_y1:1998,
           time.plot = opt_y1:2013
 )
+
+md_curr <- md_u20_sp
+
 ```
 
 Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(md_u20_sp, "under 20")$tot_diff` pregnancies (to an average population of `r rateDiff(md_u20_sp, "under 20")$mean_pop` women).
@@ -404,6 +435,14 @@ if (params$save_graphs){ggsave(plot = gr_u20_sp, "graphs/Synth-u20-sp.png", widt
 
 
 ```
+
+```{r include=FALSE}
+mspe_curr <- pre_MSPE(md_curr)
+# ave_pop_curr <- 
+rsq_curr <- pre_corr(md_curr)
+```
+
+The MSPE across the pre-intervention period was `r mspe_curr`, (an average error of `r signif(sqrt(mspe_curr), 3)`) and the synthetic predictor was able to account for `r round(rsq_curr, 3)*100`% of the variance (R^2^ = `r round(rsq_curr, 3)`).
 
 ### Weights and balance
 ```{r st_u20_sp_w}
@@ -446,28 +485,32 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/49).
 
 
-```{r rank_u20, include=FALSE}
-pp_u20_sp <- gg_pre_postMSPE(md_u20_sp, pl_u20_filt) + labs(title = "Post/pre-TPS mean squared prediction error")
+```{r rank_u20}
+pp_u20_sp <- gg_pre_postMSPE(md_u20_sp, pl_u20_filt) +
+  scale_x_log10(labels = scales::comma_format(accuracy = 1), breaks = c(0,1,10, 100, 1000)) + scale_y_continuous(breaks = c(0,1,2,3)) + theme(plot.margin = unit(c(5.5,12,5.5,5.5), "pt"))
 
 p20 <- ggplot_build(pp_u20_sp)
 
 rank_u20 <- p20$plot$data %>% 
-  arrange(desc(ratio)) %>% 
   ungroup() %>% 
-  mutate(rank = rank(-ratio)) %>% 
-  select(Country, ratio, rank)
+  mutate(Rank = rank(-ratio),
+         `Post/pre MSPE ratio` = round(ratio, 2)) %>% 
+  arrange(Rank) %>% 
+  select(Country, `Post/pre MSPE ratio`, Rank)
+
+kable(rank_u20)
 ```
 
-In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
+In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(Rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
 
 ```{r pp_u20_sp}
 
-pp_u20_sp
+pp_u20_sp <- gg_pre_postMSPE_tab(md_u20_sp, pl_u20_filt)
 
 ```
 
 ```{r save_u20_sp_pb_nat, include=FALSE}
-if (params$save_graphs){ggsave(plot = pp_u20_sp, "graphs/Synth-u20-sp-pp-ratio.png", width = 155, height = 100, units = "mm")}
+if (params$save_graphs){ggsave(plot = pp_u20_sp, "graphs/Synth-u20-sp-pp-ratio.png", width = 155, height = 120, units = "mm")}
 if (params$save_graphs){ggsave(plot = pb_plot_u20_sp, "graphs/Synth-u20-sp-gaps.png", width = 155, height = 100, units = "mm")}
 ```
 
@@ -526,6 +569,8 @@ synthPrep(sd_noScot,
           time.predictors.prior = 1990:1998,
           time.plot = 1990:2013
 )
+
+md_curr <- md_u18_ns
 ```
 
 Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(md_u18_ns, "under 18")$tot_diff` births (to an average population of `r rateDiff(md_u18_ns, "under 18")$mean_pop` women).
@@ -540,7 +585,13 @@ if (params$save_graphs){ggsave("graphs/Synth-u18-ns.png", gr_u18_ns, width = 155
 
 ```
 
-Loss-V (For optimised period) = `r signif(so_u18_ns$loss.v[[1]], 3)`, MSPE (for whole pre-intervention observation period) = `r pre_MSPE(md_u18_ns)`.
+```{r include=FALSE}
+mspe_curr <- pre_MSPE(md_curr)
+# ave_pop_curr <- 
+rsq_curr <- pre_corr(md_curr)
+```
+
+The MSPE across the pre-intervention period was `r mspe_curr`, (an average error of `r signif(sqrt(mspe_curr), 3)`) and the synthetic predictor was able to account for `r round(rsq_curr, 3)*100`% of the variance (R^2^ = `r round(rsq_curr, 3)`).
 
 ### Weights and balance
 
@@ -587,27 +638,31 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/61).
 
 ```{r rank_u18_ns}
-pp_u18_ns <- gg_pre_postMSPE(md_u18_ns, pl_u18_filt) + labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u18_ns <- gg_pre_postMSPE(md_u18_ns, pl_u18_ns)+
+  scale_x_log10(labels = scales::comma_format(accuracy = 1), breaks = c(0,1,10, 100, 1000)) + scale_y_continuous(breaks = c(0,1,2,3)) + theme(plot.margin = unit(c(5.5,12,5.5,5.5), "pt"))
 
 p18 <- ggplot_build(pp_u18_ns)
 
 rank_u18 <- p18$plot$data %>% 
-  arrange(desc(ratio)) %>% 
   ungroup() %>% 
-  mutate(rank = rank(-ratio)) %>% 
-  select(Country, ratio, rank)
+  mutate(Rank = rank(-ratio),
+         `Post/pre MSPE ratio` = round(ratio, 2)) %>% 
+  arrange(Rank) %>% 
+  select(Country, `Post/pre MSPE ratio`, Rank)
+
+kable(rank_u18)
 ```
 
-In placebo-country tests, England and Wales ranked `r rank_u18 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u18)` countries by pre/post-MSPE ratio.
+In placebo-country tests, England and Wales ranked `r rank_u18 %>% filter(Country == "England and Wales") %>% pull(Rank)` out of `r nrow(rank_u18)` countries by pre/post-MSPE ratio.
 
 ```{r pp_u18_ns}
 
-pp_u18_ns
+pp_u18_ns <- gg_pre_postMSPE_tab(md_u18_ns, pl_u18_ns) 
 
 ```
 
 ```{r save_u18_pb_nat_ns, include=FALSE}
-if (params$save_graphs){ggsave(plot = pp_u18_ns, "graphs/Synth-u18-ns-pp-ratio.png", width = 155, height = 100, units = "mm")}
+if (params$save_graphs){ggsave(plot = pp_u18_ns, "graphs/Synth-u18-ns-pp-ratio.png", width = 155, height = 120, units = "mm")}
 if (params$save_graphs){ggsave(plot = pb_plot_u18_ns, "graphs/Synth-u18-ns-gaps.png", width = 155, height = 100, units = "mm")}
 ```
 
@@ -663,6 +718,9 @@ synthPrep(sd_noScot,
           time.predictors.prior = 1990:1998,
           time.plot = 1990:2013
 )
+
+md_curr <- md_u20_ns
+
 ```
 
 Over the period 1999 to 2013, England and Wales saw a difference of `r rateDiff(md_u20_ns, "under 20")$tot_diff` pregnancies (to an average population of `r rateDiff(md_u20_ns, "under 20")$mean_pop` women).
@@ -676,7 +734,13 @@ gr_u20_ns# + labs(title = sPredText(dp_u20_ns))
 if (params$save_graphs){ggsave("graphs/Synth-u20-ns.png", gr_u20_ns, width = 155, height = 100, units = "mm")}
 ```
 
-Loss-V (For optimised period) = `r signif(so_u20_ns$loss.v[[1]], 3)`, MSPE (for whole pre-intervention observation period) = `r pre_MSPE(md_u20_ns)`.
+```{r include=FALSE}
+mspe_curr <- pre_MSPE(md_curr)
+# ave_pop_curr <- 
+rsq_curr <- pre_corr(md_curr)
+```
+
+The MSPE across the pre-intervention period was `r mspe_curr`, (an average error of `r signif(sqrt(mspe_curr), 3)`) and the synthetic predictor was able to account for `r round(rsq_curr, 3)*100`% of the variance (R^2^ = `r round(rsq_curr, 3)`).
 
 ### Weights and balance
 ```{r st_u20_ns_w}
@@ -720,26 +784,30 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/102).
 
 ```{r rank_u20_ns}
-pp_u20_ns <- gg_pre_postMSPE(md_u20_ns, pl_u20_ns) + labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u20_ns <- gg_pre_postMSPE(md_u20_ns, pl_u20_ns) +
+  scale_x_log10(labels = scales::comma_format(accuracy = 1), breaks = c(0,1,10, 100, 1000)) + scale_y_continuous(breaks = c(0,1,2,3)) + theme(plot.margin = unit(c(5.5,12,5.5,5.5), "pt"))
 
 p20 <- ggplot_build(pp_u20_ns)
 
 rank_u20 <- p20$plot$data %>% 
-  arrange(desc(ratio)) %>% 
   ungroup() %>% 
-  mutate(rank = rank(-ratio)) %>% 
-  select(Country, ratio, rank)
+  mutate(Rank = rank(-ratio),
+         `Post/pre MSPE ratio` = round(ratio, 2)) %>% 
+  arrange(Rank) %>% 
+  select(Country, `Post/pre MSPE ratio`, Rank)
+
+kable(rank_u20)
 ```
 
-In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
+In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(Rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
 
 ```{r pp_u20_ns}
 
-pp_u20_ns
+pp_u20_ns <- gg_pre_postMSPE_tab(md_u20_ns, pl_u20_ns)
 
 ```
 ```{r save_u20_ns_pb_nat, include=FALSE}
-if (params$save_graphs){ggsave(plot = pp_u20_ns, "graphs/Synth-u20-ns-pp-ratio.png", width = 155, height = 100, units = "mm")}
+if (params$save_graphs){ggsave(plot = pp_u20_ns, "graphs/Synth-u20-ns-pp-ratio.png", width = 155, height = 120, units = "mm")}
 if (params$save_graphs){ggsave(plot = pb_plot_u20_ns, "graphs/Synth-u20-ns-gaps.png", width = 155, height = 100, units = "mm")}
 ```
 
@@ -805,6 +873,8 @@ synthPrep(sd_noScot %>% filter(Country != "New Zealand"),
           time.predictors.prior = 1990:1998
 )
 
+md_curr <- md_u18_all
+
 ```
 
 ```{r md_u18_all_graph}
@@ -818,7 +888,13 @@ gr_u18_all #+ labs(title = sPredText(dp_u18_all))
 #  ggsave("graphs/Synth-u18-all-1990.png", width = 200, height = 150, units = "mm")
 ```
 
-Loss-V (For optimised period) = `r signif(so_u18_all$loss.v[[1]], 3)`, MSPE (for whole pre-intervention observation period) = `r pre_MSPE(md_u18_all)`.
+```{r include=FALSE}
+mspe_curr <- pre_MSPE(md_curr)
+# ave_pop_curr <- 
+rsq_curr <- pre_corr(md_curr)
+```
+
+The MSPE across the pre-intervention period was `r mspe_curr`, (an average error of `r signif(sqrt(mspe_curr), 3)`) and the synthetic predictor was able to account for `r round(rsq_curr, 3)*100`% of the variance (R^2^ = `r round(rsq_curr, 3)`).
 
 ### Weights and balance
 ```{r st_u18_all_w}
@@ -856,22 +932,26 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/106).
 
 ```{r rank_u18_all}
-pp_u18_all <- gg_pre_postMSPE(md_u18_all, pl_u18_all) + labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u18_all <- gg_pre_postMSPE(md_u18_all, pl_u18_all) +
+  scale_x_log10(labels = scales::comma_format(accuracy = 1), breaks = c(0,1,10, 100, 1000)) + scale_y_continuous(breaks = c(0,1,2,3)) + theme(plot.margin = unit(c(5.5,12,5.5,5.5), "pt"))
 
 p18 <- ggplot_build(pp_u18_all)
 
 rank_u18 <- p18$plot$data %>% 
-  arrange(desc(ratio)) %>% 
   ungroup() %>% 
-  mutate(rank = rank(-ratio)) %>% 
-  select(Country, ratio, rank)
+  mutate(Rank = rank(-ratio),
+         `Post/pre MSPE ratio` = round(ratio, 2)) %>% 
+  arrange(Rank) %>% 
+  select(Country, `Post/pre MSPE ratio`, Rank)
+
+kable(rank_u18)
 ```
 
-In placebo-country tests, England and Wales ranked `r rank_u18 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u18)` countries by pre/post-MSPE ratio.
+In placebo-country tests, England and Wales ranked `r rank_u18 %>% filter(Country == "England and Wales") %>% pull(Rank)` out of `r nrow(rank_u18)` countries by pre/post-MSPE ratio.
 
 ```{r pp_u18_all}
 
-pp_u18_all
+pp_u18_all <- gg_pre_postMSPE_tab(md_u18_all, pl_u18_all)
 
 ```
 
@@ -895,6 +975,8 @@ synthPrep(sd_noScot %>% filter(Country != "New Zealand"),
           time.predictors.prior = 1990:1998
 )
 
+md_curr <- md_u20_all
+
 ```
 
 ```{r md_u20_all_graph}
@@ -903,7 +985,13 @@ gr_u20_all <- gg_synth(md = md_u20_all, post = TRUE) + xlim(1990, 2013)
 gr_u20_all
 ```
 
-Loss-V (For optimised period) = `r signif(so_u20_all$loss.v[[1]], 3)`, MSPE (for whole pre-intervention observation period) = `r pre_MSPE(md_u20_all)`.
+```{r include=FALSE}
+mspe_curr <- pre_MSPE(md_curr)
+# ave_pop_curr <- 
+rsq_curr <- pre_corr(md_curr)
+```
+
+The MSPE across the pre-intervention period was `r mspe_curr`, (an average error of `r signif(sqrt(mspe_curr), 3)`) and the synthetic predictor was able to account for `r round(rsq_curr, 3)*100`% of the variance (R^2^ = `r round(rsq_curr, 3)`).
 
 ### Weights and balance
 ```{r st_u20_all_w}
@@ -940,22 +1028,26 @@ if (params$plotly_graphs == "plotly" & params$publish_plotly) {
 View this [live online](https://chart-studio.plotly.com/~andrewbaxter439/100).
 
 ```{r rank_u20_all}
-pp_u20_all <- gg_pre_postMSPE(md_u20_all, pl_u20_all) + labs(title = "Post/pre-TPS mean squared prediction error")
+pp_u20_all <- gg_pre_postMSPE(md_u20_all, pl_u20_all) +
+  scale_x_log10(labels = scales::comma_format(accuracy = 1), breaks = c(0,1,10, 100, 1000)) + scale_y_continuous(breaks = c(0,1,2,3)) + theme(plot.margin = unit(c(5.5,12,5.5,5.5), "pt"))
 
 p20 <- ggplot_build(pp_u20_all)
 
 rank_u20 <- p20$plot$data %>% 
-  arrange(desc(ratio)) %>% 
   ungroup() %>% 
-  mutate(rank = rank(-ratio)) %>% 
-  select(Country, ratio, rank)
+  mutate(Rank = rank(-ratio),
+         `Post/pre MSPE ratio` = round(ratio, 2)) %>% 
+  arrange(Rank) %>% 
+  select(Country, `Post/pre MSPE ratio`, Rank)
+
+kable(rank_u20)
 ```
 
-In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
+In placebo-country tests, England and Wales ranked `r rank_u20 %>% filter(Country == "England and Wales") %>% pull(Rank)` out of `r nrow(rank_u20)` countries by pre/post-MSPE ratio.
 
 ```{r pp_u20_all}
 
-pp_u20_all
+pp_u20_all <- gg_pre_postMSPE_tab(md_u20_all, pl_u20_all) 
 
 ```
 
