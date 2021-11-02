@@ -1,0 +1,492 @@
+---
+title: "Calculating power"
+author: "Andy Baxter"
+date: "01/11/2021"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(patchwork)
+library(car)
+library(nlme)
+load("Data/all_uk_rates_u.rdata")
+
+vec_to_list <- function(x) lapply(split(x, names(x)), unname)
+
+terms_for_coef <- function(mod, term) vec_to_list(summary(mod)$tTable[term,])
+
+under_18 <- all_UK_rates$`Under 18` %>% 
+  filter(Year >= 1992, Country != "England and Wales") %>%
+  mutate(
+    England = ifelse(Country == "England", 1, 0),
+    Year = as.numeric(Year),
+    Time = Year - min(Year) + 1,
+    Cat1 = ifelse(Year < 1999, 0, 1),
+    Cat2 = ifelse(Year <= 2008, 0, 1),
+    Trend1 = ifelse(Cat1 == 0, 0, Year - 1998),
+    Trend2 = ifelse(Cat2 == 0, 0, Year - 2008),
+    PillScare = ifelse(Year >= 1996, 1, 0)
+  ) %>%
+  mutate_at(., colnames(.)[5:9], list(Eng = ~ .*England))
+
+u18_eng <-  filter(under_18, Country == "England")
+u18_scot <-  filter(under_18, Country == "Scotland")
+u18_wal <-  filter(under_18, Country == "Wales")
+u18_engscot <- filter(under_18, Country != "Wales") 
+u18_engwal <-  filter(under_18, Country != "Scotland")
+
+```
+
+## Model 1 - Scotland and England (no bump)
+
+```{r mod_scot1}
+mod_scot <- gls(
+  Value ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + PillScare,
+  data = u18_engscot,
+  method = "ML",
+  correlation = corARMA(
+    p = 1,
+    q = 0,
+    form = ~ Time | England
+  )
+)
+
+scot_phi <-  coef(mod_scot$modelStruct$corStruct,unconstrained = FALSE)
+mod_scot
+```
+
+Scotland model $\phi$ = `r scot_phi`
+
+## Model 2 - Wales and England (no bump)
+
+```{r mod_wal1}
+mod_wal <- gls(
+  Value ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + PillScare,
+  data = u18_engwal,
+  method = "ML",
+  correlation = corARMA(
+    p = 1,
+    q = 0,
+    form = ~ Time | England
+  )
+)
+
+# wal phi = 0.8880
+wal_phi <- coef(mod_wal$modelStruct$corStruct, unconstrained = FALSE)
+mod_wal
+```
+
+Wales model $\phi$ = `r wal_phi`
+
+## Model 3 - Scotland and England with 2008 bump
+
+```{r mod_scot_08}
+mod_scot_08 <- gls(
+  Value ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + Trend2 + PillScare,
+  data = u18_engscot,
+  method = "ML",
+  correlation = corARMA(
+    p = 1,
+    q = 0,
+    form = ~ Time | England
+  )
+)
+
+scot_phi_08 <-  coef(mod_scot_08$modelStruct$corStruct,unconstrained = FALSE)
+mod_scot_08
+```
+
+Scotland model $\phi$ = `r scot_phi_08`
+
+## Model 4 - Wales and England with 2008 bump
+
+```{r mod_wal_08}
+mod_wal_08 <- gls(
+  Value ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + Trend2 + PillScare,
+  data = u18_engwal,
+  method = "ML",
+  correlation = corARMA(
+    p = 1,
+    q = 0,
+    form = ~ Time | England
+  )
+)
+
+wal_phi_08 <- coef(mod_wal_08$modelStruct$corStruct, unconstrained = FALSE)
+mod_wal_08
+```
+Wales model $\phi$ = `r wal_phi_08`
+
+## Calculating power
+
+$$
+\sigma^2_\hat\omega = \sigma^2_aI_{1,1}/(I_{1,1}I_{2,2}-I_{1,2}^2)
+$$
+
+Where  I1,1 = n(1−φ)2, I2,2 = (n−T )(1− φ)2+1 and I1,2 = I2,2− φ. 
+
+$$
+I_{1,1} = n(1-\phi)^2\\
+I_{2,2} = (n - T)(1 - \phi)^2 +1\\
+I_{1,2} = I_{2,2}-\phi
+$$
+Where $\omega$ is $\beta_6$ = difference in trend change between Scotland and Wales
+
+```{r scot_power}
+
+sd_resid <- sd(resid(mod_scot))
+
+
+```
+
+## Calculating using power function from Wal/Scot/Eng only models
+
+Getting standard errors of trend change for England-only and control-only models, and pooling them, should allow for the testing of a 1-pooled-se difference in trend.
+
+```{r wal_only}
+
+mod_wal_only <- gls(
+  Value ~ Time + Cat1 + Trend1 + PillScare,
+  data = u18_wal,
+  method = "ML",
+  correlation = corARMA(
+    p = 1,
+    q = 0,
+    form = ~ Time
+  )
+)
+
+# wal phi = 0.8880
+wal_phi_only <- coef(mod_wal_only$modelStruct$corStruct, unconstrained = FALSE)
+
+wal_terms <- terms_for_coef(mod_wal_only, 'Trend1')
+```
+
+```{r eng_only}
+mod_eng_only <- gls(
+  Value ~ Time + Cat1 + Trend1 + PillScare,
+  data = u18_eng,
+  method = "ML",
+  correlation = corARMA(
+    p = 1,
+    q = 0,
+    form = ~ Time
+  )
+)
+
+eng_phi_only <- coef(mod_eng_only$modelStruct$corStruct, unconstrained = FALSE)
+
+eng_terms <- terms_for_coef(mod_eng_only, 'Trend1')
+
+
+```
+
+```{r scot_only}
+mod_scot_only <- gls(
+  Value ~ Time + Cat1 + Trend1 + PillScare,
+  data = u18_scot,
+  method = "ML",
+  correlation = corARMA(
+    p = 1,
+    q = 0,
+    form = ~ Time
+  )
+)
+
+scot_phi_only <- coef(mod_scot_only$modelStruct$corStruct, unconstrained = FALSE)
+
+scot_terms <- terms_for_coef(mod_scot_only, 'Trend1')
+
+
+```
+### Getting values
+
+```{r eng_wa_pool}
+
+pooled_se <- sqrt((wal_terms$Std.Error^2 + eng_terms$Std.Error^2)/2)
+
+one_fewer_diff <- 1/pooled_se
+two_fewer_diff <- 2/pooled_se
+
+```
+
+Equation for two-tailed difference:
+
+$$
+
+\Pi(\omega)=\Phi(-\mathcal{Z}_{1-\alpha/2}-\omega/\sigma_\hat\omega)+1-\Phi(\mathcal{Z}_{1-\alpha/2}-\omega/\sigma_\hat\omega)
+
+$$
+For one-tailed:
+
+```{r prob_dist_func}
+
+pnorm(q = 1, sd = pooled_se, lower.tail = TRUE)
+pnorm(q = one_fewer_diff, sd = pooled_se, lower.tail = TRUE)
+pnorm(q = two_fewer_diff, sd = pooled_se, lower.tail = TRUE)
+
+```
+## Scot simple model
+
+```{r eng_scot_pool}
+
+pooled_se <- sqrt((scot_terms$Std.Error^2 + eng_terms$Std.Error^2)/2)
+
+one_fewer_diff <- 1/pooled_se
+two_fewer_diff <- 2/pooled_se
+
+
+pnorm(q = 1, sd = pooled_se, lower.tail = TRUE)
+pnorm(q = one_fewer_diff, sd = pooled_se, lower.tail = TRUE)
+pnorm(q = two_fewer_diff, sd = pooled_se, lower.tail = TRUE)
+
+```
+
+## Wales bump model
+
+
+# Sack it, let's simulate!
+
+```{r sim_scot}
+
+trend_change <- terms_for_coef(mod_scot, "Trend1_Eng")
+
+resid_plot <- u18_engscot %>% 
+  mutate(resid = mod_scot$residuals) %>% 
+  ggplot(aes(Year, resid, col = Country)) +
+  geom_line()
+
+
+mod_plot <- u18_engscot %>% 
+  mutate(pred = predict(mod_scot)) %>% 
+  ggplot(aes(Year, col = Country)) +
+  geom_point(aes(y = Value)) +
+  geom_line(aes(y = pred, group = interaction(Cat1, Country)))
+
+resid_plot/mod_plot
+```
+
+```{r synth_dataset}
+
+one_diff_mod <- mod_scot$coefficients
+one_diff_mod[7] <- -0.5
+one_diff_mod <- unname(one_diff_mod)
+se_mod <- summary(mod_scot)$tTable[,'Std.Error']
+
+
+u18_engscot %>% 
+  mutate(resid = mod_scot$residuals,
+         pred = one_diff_mod[1] +
+           Time * one_diff_mod[2] +
+           England * one_diff_mod[3] +
+           Cat1 * one_diff_mod[4] +
+           Trend1 * one_diff_mod[5] +
+           Cat1_Eng * one_diff_mod[6] +
+           Trend1_Eng * one_diff_mod[7] +
+           PillScare * one_diff_mod[8]) %>% 
+  ggplot(aes(Year, col = Country)) +
+  geom_point(aes(y = Value)) +
+  geom_line(aes(y = pred, group = interaction(Cat1, Country)))
+
+```
+
+```{r doing_with_errors}
+
+
+sim_once <- function(trend_diff = 0, data = u18_engscot, formula = synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + PillScare, mod = mod_scot) {
+  
+  one_diff_mod <- mod$coefficients
+  
+new_data <- data %>% 
+  mutate(resid = mod$residuals) %>% 
+  arrange(Country, Year) %>% 
+  group_by(Country) %>% 
+  mutate(new_resid = rnorm(25, sd = sd(resid)),
+         lagged_resid = lag(new_resid),
+         synth_pred = case_when(
+    Country != "England" ~ Value,
+    Year < 1999 ~ Value,
+    TRUE ~ (one_diff_mod[1]  )+
+           Time * (one_diff_mod[2]  )+
+           England * (one_diff_mod[3] )+
+           Cat1 * (one_diff_mod[4] )+
+           Trend1 * (one_diff_mod[5]  )+
+           Cat1_Eng * (one_diff_mod[6])+
+           Trend1_Eng * trend_diff +
+           PillScare * (one_diff_mod[8] ) +
+      new_resid +
+      scot_phi * lagged_resid
+  ))# %>% ggplot(aes(Year, synth_pred, col = Country)) + geom_point()
+
+ new_mod <- gls(
+  formula,
+  data = new_data,
+  method = "ML",
+  correlation = corARMA(
+    p = 1,
+    q = 0,
+    form = ~ Time | England
+  )
+)
+ 
+ # new_data %>% 
+ #   ungroup() %>% 
+ #   mutate(pred = predict(new_mod)) %>% 
+ #   ggplot(aes(Year, synth_pred, col = Country)) + 
+ #   geom_point() +
+ #   geom_line(aes(y = pred, group = interaction(Country, Cat1)))
+
+ summary(new_mod)$tTable['Trend1_Eng','p-value']
+}
+
+vals <- 1:1000 %>% 
+  map_dbl(~ sim_once(-0.5))
+
+
+tibble(x = vals) %T>% 
+  {summarise(., detected = sum(x<0.05)/n()) %>% print()} %>% 
+  ggplot(aes(x)) + geom_histogram()
+```
+
+# Back to trying distrubutions from comparative models
+
+Fit to Scotland pre and England pre. Use Scotland slope and se to calculate power to detect difference.
+
+
+$$
+H_0 :Trend1_{Eng}=Trend1_{Scot}\\
+H_a :Trend1_{Eng}<Trend1_{Scot}
+$$
+
+```{r scot_eng_blind}
+
+mod_scot_pred <- u18_engscot %>%
+  filter(Country != "England" | Year < 1999) %>% ggplot(aes(Year, Value, col = Country)) + geom_point()
+  gls(
+    Value ~ Time + England + Cat1 + Trend1 + PillScare,
+    data = .,
+    method = "ML",
+    correlation = corARMA(
+      p = 1,
+      q = 0,
+      form = ~ Time | England
+    )
+  )
+
+summary(mod_scot_pred)
+
+mod_terms <- terms_for_coef(mod_scot_pred, "Trend1")
+
+
+test_slope <- mod_terms$Value
+se <- mod_terms$Std.Error
+
+
+bottom <- test_slope - mod_terms$Std.Error * qnorm(0.975, lower.tail = TRUE)
+top <- test_slope + mod_terms$Std.Error * qnorm(0.975, lower.tail = TRUE)
+
+test_diff <- test_slope - 1
+z_bottom <- (bottom - test_diff)/mod_terms$Std.Error
+z_top <- (top - test_diff)/mod_terms$Std.Error
+
+p <- pnorm(z_top)-pnorm(z_bottom)
+
+p
+1-p
+```
+
+## Make it a function!
+```{r power_function}
+power_pred <-
+  function(diff = 0,
+           data = u18_engscot,
+           form = Value ~ Time + England + Cat1 + Trend1 + PillScare)
+    
+  {
+    mod_pred <- data %>%
+      filter(Country != "England" | Year < 1999) %>%
+      gls(
+        form,
+        data = .,
+        method = "ML",
+        correlation = corARMA(
+          p = 1,
+          q = 0,
+          form = ~ Time | England
+        )
+      )
+    
+    
+    mod_terms <- terms_for_coef(mod_pred, "Trend1")
+    
+    test_slope <- mod_terms$Value
+    se <- mod_terms$Std.Error
+    
+    
+    bottom <-
+      test_slope - mod_terms$Std.Error * qnorm(0.05, lower.tail = FALSE)
+    test_diff <- test_slope + diff
+    z_bottom <- (bottom - test_diff) / mod_terms$Std.Error
+    
+    
+    p <- pnorm(z_bottom, lower.tail = FALSE)
+    
+    p
+    1 - p
+  }
+
+```
+
+```{r repeating_comparisons}
+
+ sim <- tribble(
+   ~ comp, ~ diff, ~ data, ~ form,
+    "scot_simple", 0, u18_engscot, Value ~ Time + England + Cat1 + Trend1 + PillScare, 
+    "wal_simple", 0, u18_engwal, Value ~ Time + England + Cat1 + Trend1 + PillScare, 
+    "scot_bump", 0, u18_engscot, Value ~ Time + England + Cat1 + Trend1 + Trend2 + PillScare, 
+    "wal_bump", 0, u18_engwal, Value ~ Time + England + Cat1 + Trend1 +  Trend2 + PillScare,
+   "scot_nopill", 0, u18_engscot, Value ~ Time + England + Cat1 + Trend1, 
+   "wal_nopill", 0, u18_engwal, Value ~ Time + England + Cat1 + Trend1
+  )
+
+  sim <- bind_rows(sim, mutate(sim, diff = diff - 0.5)) %>%
+    bind_rows(mutate(sim, diff = diff - 1)) %>% 
+    bind_rows(mutate(sim, diff = diff - 2))
+
+sim %>% 
+  mutate(comp = factor(comp, levels = c("scot_nopill", "wal_nopill", "scot_simple", "wal_simple", "scot_bump", "wal_bump" ))) %>% 
+  arrange(comp) %>% 
+  mutate(power = pmap_dbl(list(diff, data, form), ~ power_pred(..1,..2,..3))) %>% 
+  select(comp, diff, power) %>% 
+  pivot_wider(id_cols = comp, names_from = diff, values_from = power, names_prefix = "diff_") %>% 
+  select(-diff_0) %>% 
+  mutate(across(where(is.numeric), ~paste0(round(.x, 3)*100, "%"))) %>% 
+  knitr::kable()
+```
+
+
+# Reading in synth bits
+
+```{r test_synth}
+load("Data/p_values_synthetic_data.rdata")
+
+p_table %>% 
+  mutate(comp = factor(comp, levels = c("scot_simple", "wal_simple", "scot_bump", "wal_bump"))) %>% 
+  ggplot(aes(p)) +
+  geom_histogram() +
+  facet_grid(comp ~ diff, scales = "free_y")
+
+```
+
+
+```{r}
+
+p_table %>% 
+  mutate(comp = factor(comp, levels = c("scot_simple", "wal_simple", "scot_bump", "wal_bump"))) %>% 
+  group_by(comp, diff) %>% 
+  summarise(signif = sum(p<0.05)/n()) %>% 
+  pivot_wider(id_cols = comp, names_from = diff, values_from = signif, names_prefix = "diff_")
+
+```

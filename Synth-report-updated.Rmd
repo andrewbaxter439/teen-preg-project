@@ -311,8 +311,7 @@ if (params$save_graphs){ggsave(
 if (params$save_graphs){ggsave(
   plot = pb_plot_u18_sp +
     theme(title = element_text(size = 14),
-          axis.title = element_text(size = 12),
-          legend.position = "none"),  dpi = 400, "graphs/Synth-u18-sp-gaps.png", width = 155, height = 100, units = "mm")}
+          axis.title = element_text(size = 12)),  dpi = 400, "graphs/Synth-u18-sp-gaps.png", width = 155, height = 100, units = "mm")}
 ```
 
 ```{r u18_pb_time_graph, fig.show="animate",	interval = 1/20}
@@ -511,7 +510,7 @@ pp_u20_sp <- gg_pre_postMSPE_tab(md_u20_sp, pl_u20_filt)
 
 ```{r save_u20_sp_pb_nat, include=FALSE}
 if (params$save_graphs){ggsave(plot = pp_u20_sp, "graphs/Synth-u20-sp-pp-ratio.png", width = 155, height = 120, units = "mm")}
-if (params$save_graphs){ggsave(plot = pb_plot_u20_sp, "graphs/Synth-u20-sp-gaps.png", width = 155, height = 100, units = "mm")}
+if (params$save_graphs){ggsave(plot = pb_plot_u20_sp, "graphs/Synth-u20-sp-gaps.png",dpi = 400,  width = 155, height = 100, units = "mm")}
 ```
 
 
@@ -663,7 +662,7 @@ pp_u18_ns <- gg_pre_postMSPE_tab(md_u18_ns, pl_u18_ns)
 
 ```{r save_u18_pb_nat_ns, include=FALSE}
 if (params$save_graphs){ggsave(plot = pp_u18_ns, "graphs/Synth-u18-ns-pp-ratio.png", width = 155, height = 120, units = "mm")}
-if (params$save_graphs){ggsave(plot = pb_plot_u18_ns, "graphs/Synth-u18-ns-gaps.png", width = 155, height = 100, units = "mm")}
+if (params$save_graphs){ggsave(plot = pb_plot_u18_ns, "graphs/Synth-u18-ns-gaps.png",dpi = 400, width = 155, height = 100, units = "mm")}
 ```
 
 ```{r u18_pb_time_graph_ns, fig.show="animate",	interval = 1/20}
@@ -808,7 +807,7 @@ pp_u20_ns <- gg_pre_postMSPE_tab(md_u20_ns, pl_u20_ns)
 ```
 ```{r save_u20_ns_pb_nat, include=FALSE}
 if (params$save_graphs){ggsave(plot = pp_u20_ns, "graphs/Synth-u20-ns-pp-ratio.png", width = 155, height = 120, units = "mm")}
-if (params$save_graphs){ggsave(plot = pb_plot_u20_ns, "graphs/Synth-u20-ns-gaps.png", width = 155, height = 100, units = "mm")}
+if (params$save_graphs){ggsave(plot = pb_plot_u20_ns, "graphs/Synth-u20-ns-gaps.png", width = 155, dpi = 400, height = 100, units = "mm")}
 ```
 
 

@@ -249,17 +249,47 @@ gg_gaps <- function(md, pl, dp = NULL, mspe_limit = NULL, title = FALSE, subtitl
     mspe_limit <- pre_MSPE(md)
   }
   
-  p <- md %>% 
-    spread(Group, Rate) %>% 
-    mutate(Gap = Treated - Synthetic) %>% 
+  # p <- md %>% 
+  #   spread(Group, Rate) %>% 
+  #   mutate(Gap = Treated - Synthetic) %>% 
+  #   ggplot(aes(Year, Gap)) +
+  #   geom_segment(x = min(md$Year), xend = 2013, y = 0, yend = 0) +
+  #   geom_line(data = pl %>% filter(pre_mspe < 5*mspe_limit), aes(group = Country), col = "grey") +
+  #   geom_line(col = sphsu_cols("Thistle", names = FALSE), size = 2) +
+  #   theme_minimal() +
+  #   theme(panel.grid = element_blank()) +
+  #   geom_vline(xintercept = 1998.5, linetype = "dotted") +
+  #   ylab("Gap = Treated - Synthetic Control")
+  
+  p <- md %>%
+    spread(Group, Rate) %>%
+    mutate(Gap = Treated - Synthetic) %>%
     ggplot(aes(Year, Gap)) +
-    geom_segment(x = min(md$Year), xend = 2013, y = 0, yend = 0) +
-    geom_line(data = pl %>% filter(pre_mspe < 5*mspe_limit), aes(group = Country), col = "grey") +
-    geom_line(col = sphsu_cols("Thistle", names = FALSE), size = 2) +
+    geom_segment(
+      x = min(md$Year),
+      xend = 2013,
+      y = 0,
+      yend = 0
+    ) +
+    geom_line(data = pl %>% filter(pre_mspe < 5 * mspe_limit),
+              aes(group = Country, col = "Placebo countries", size = "Placebo countries")) +
+    geom_line(aes(col = "England and Wales", size = "England and Wales")) +
     theme_minimal() +
     theme(panel.grid = element_blank()) +
     geom_vline(xintercept = 1998.5, linetype = "dotted") +
-    ylab("Gap = Treated - Synthetic Control")
+    scale_colour_manual("",
+                        values = c(
+                          "England and Wales" = sphsu_cols("Thistle", names = FALSE),
+                          "Placebo countries" = "grey"
+                        )) +
+    scale_size_manual(values = c(
+      "England and Wales" = 2,
+      "Placebo countries" = 0.5
+      
+    )) +
+    ylab("Gap = Treated - Synthetic Control") +
+    theme(legend.position = "bottom") +
+    labs(color = "", size = "")
   
   pl %>% 
     filter(pre_mspe > 5*mspe_limit) %>% 
