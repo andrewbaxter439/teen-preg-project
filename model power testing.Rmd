@@ -2,7 +2,8 @@
 title: "Calculating power"
 author: "Andy Baxter"
 date: "01/11/2021"
-output: html_notebook
+output:
+  html_notebook
 ---
 
 ```{r setup, include=FALSE}
@@ -14,6 +15,8 @@ library(nlme)
 load("Data/all_uk_rates_u.rdata")
 
 vec_to_list <- function(x) lapply(split(x, names(x)), unname)
+
+get_phi <- function(mod) unname(coef(mod$modelStruct$corStruct,unconstrained = FALSE))
 
 terms_for_coef <- function(mod, term) vec_to_list(summary(mod)$tTable[term,])
 
@@ -268,6 +271,10 @@ mod_plot <- u18_engscot %>%
 resid_plot/mod_plot
 ```
 
+```{r}
+ggplot(mtcars)
+```
+
 ```{r synth_dataset}
 
 one_diff_mod <- mod_scot$coefficients
@@ -341,7 +348,7 @@ new_data <- data %>%
  summary(new_mod)$tTable['Trend1_Eng','p-value']
 }
 
-vals <- 1:1000 %>% 
+vals <- 1:10 %>% 
   map_dbl(~ sim_once(-0.5))
 
 
@@ -363,7 +370,7 @@ $$
 ```{r scot_eng_blind}
 
 mod_scot_pred <- u18_engscot %>%
-  filter(Country != "England" | Year < 1999) %>% ggplot(aes(Year, Value, col = Country)) + geom_point()
+  filter(Country != "England" | Year < 1999) %>% 
   gls(
     Value ~ Time + England + Cat1 + Trend1 + PillScare,
     data = .,
@@ -402,9 +409,8 @@ p
 power_pred <-
   function(diff = 0,
            data = u18_engscot,
-           form = Value ~ Time + England + Cat1 + Trend1 + PillScare)
-    
-  {
+           form = Value ~ Time + England + Cat1 + Trend1 + PillScare,
+           sig_level = 0.025) {
     mod_pred <- data %>%
       filter(Country != "England" | Year < 1999) %>%
       gls(
@@ -418,20 +424,51 @@ power_pred <-
         )
       )
     
+    # print(mod_pred)
     
     mod_terms <- terms_for_coef(mod_pred, "Trend1")
     
-    test_slope <- mod_terms$Value
+    n <- max(data$Year) - 1991
+    pre_n <- 1999 - min(data$Year)
+    
+    null_slope <- mod_terms$Value
     se <- mod_terms$Std.Error
+    phi <- unname(get_phi(mod_pred))
+    i_1_1 <- n * (1-phi)^2
+    # i_2_2 <- (n - pre_n)*(1 - phi)^2 +1
+    # i_1_2 <- i_2_2 - phi
+    i_1_2 <- (1 +n - pre_n)*(1 - phi)*(2 + n - pre_n - (n - pre_n) * phi)/2
+    i_2_2 <- (1 + n - pre_n)*(6 + 7*n +2*n^2 -7*pre_n -4*n*pre_n +
+                                    2*pre_n^2 -8*n*phi - 4*n^2*phi + 8*pre_n*phi+8 *n*pre_n*phi -
+                                    4*pre_n^2*phi + n*phi^2 + 2*n^2*phi^2 - pre_n*phi^2 -
+                                    4*n*pre_n*phi^2 + 2*pre_n^2*phi^2)/6
     
+    tau <- sqrt((i_1_1*i_2_2 - i_1_2^2)/(i_1_1*(1 - phi)^2))
     
-    bottom <-
-      test_slope - mod_terms$Std.Error * qnorm(0.05, lower.tail = FALSE)
-    test_diff <- test_slope + diff
-    z_bottom <- (bottom - test_diff) / mod_terms$Std.Error
+    var_diff <- var(mod_pred$residuals)*i_1_1*(i_1_1*i_2_2 - i_1_2^2)
+  
+    # the  null hypothesis is that Eng == Scot
+    # the null_slope = Scot = Eng
     
+    bottom <- null_slope - mod_terms$Std.Error * qnorm(sig_level, lower.tail = FALSE)
+    # bottom is the lower CI bound for the null term
+    # the probability of seeing a value < bottom is 0.05 (if null hypothesis is true)
+    
+    test_trend <- null_slope + diff
+    # the difference being tested is diff (a negative number)
+    # England's trend is test_trend = Scot + diff
+    
+    z_bottom <- (bottom - test_trend) / mod_terms$Std.Error
+    # the Z-score is the score for a value greater than bottom (closer to null)
+    # being seen in the presence of a true effect of diff (and a true
+    # comparative trend of test_trend)
+    
+    scaled_diff <- diff / sd(mod_pred$residuals)
+    
+    # pnorm(-qnorm(0.05, lower.tail = FALSE) - tau*diff/sd(mod_pred$residuals))
     
     p <- pnorm(z_bottom, lower.tail = FALSE)
+    # 
     
     p
     1 - p
@@ -443,12 +480,95 @@ power_pred <-
 
  sim <- tribble(
    ~ comp, ~ diff, ~ data, ~ form,
-    "scot_simple", 0, u18_engscot, Value ~ Time + England + Cat1 + Trend1 + PillScare, 
-    "wal_simple", 0, u18_engwal, Value ~ Time + England + Cat1 + Trend1 + PillScare, 
-    "scot_bump", 0, u18_engscot, Value ~ Time + England + Cat1 + Trend1 + Trend2 + PillScare, 
-    "wal_bump", 0, u18_engwal, Value ~ Time + England + Cat1 + Trend1 +  Trend2 + PillScare,
-   "scot_nopill", 0, u18_engscot, Value ~ Time + England + Cat1 + Trend1, 
-   "wal_nopill", 0, u18_engwal, Value ~ Time + England + Cat1 + Trend1
+   "Scotland – non-parallel trends", 0, u18_engscot, Value ~ Time + England + Time_Eng + Cat1 + Trend1, 
+   "Wales – non-parallel trends", 0, u18_engwal, Value ~ Time + England + Time_Eng + Cat1 + Trend1,
+   "Scotland – no correctors", 0, u18_engscot, Value ~ Time + England + Cat1 + Trend1, 
+   "Wales – no correctors", 0, u18_engwal, Value ~ Time + England + Cat1 + Trend1,
+   "Scotland – pill scare corrector", 0, u18_engscot, Value ~ Time + England + Cat1 + Trend1 + PillScare, 
+   "Wales – pill scare corrector", 0, u18_engwal, Value ~ Time + England + Cat1 + Trend1 + PillScare, 
+   "Scotland – pill scare and 2008 corrector", 0, u18_engscot, Value ~ Time + England + Cat1 + Trend1 + Trend2 + PillScare, 
+   "Wales – pill scare and 2008 corrector", 0, u18_engwal, Value ~ Time + England + Cat1 + Trend1 +  Trend2 + PillScare
+  )
+
+  
+sim <- bind_rows(sim, mutate(sim, diff = diff - 0.5)) %>%
+    bind_rows(mutate(sim, diff = diff - 1)) %>% 
+    bind_rows(mutate(sim, diff = diff - 2))
+
+sim %>% 
+  mutate(power = pmap_dbl(list(diff, data, form), ~ power_pred(..1,..2,..3))) %>% 
+  select(comp, diff, power) %>% 
+  pivot_wider(id_cols = comp, names_from = diff, values_from = power, names_prefix = "diff_") %>% 
+  select(-diff_0) %>%
+  mutate(across(where(is.numeric), ~paste0(round(.x, 2)*100, "%"))) %>% 
+  knitr::kable()
+```
+
+# Or power just for the fitted term?
+
+```{r power_pred_alt}
+
+power_pred_alt <-
+  function(diff = -1,
+           data = u18_engscot,
+           form = Value ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + PillScare,
+           test_term = "Trend1_Eng",
+           two_tailed = TRUE,
+           sig_level = 0.95) {
+    mod_pred <- data %>%
+      # filter(Country != "England" | Year < 1999) %>%
+      gls(
+        form,
+        data = .,
+        method = "ML",
+        correlation = corARMA(
+          p = 1,
+          q = 0,
+          form = ~ Time | England
+        )
+      )
+    
+    
+    mod_terms <- terms_for_coef(mod_pred, test_term)
+    
+    test_slope <- 0
+    se <- mod_terms$Std.Error
+    test_diff <- diff
+    
+    sig_tail <- 1 - sig_level
+    
+    if(two_tailed) {
+    
+    # z_bottom_2 <- (test_slope - se * qnorm(0.975) - test_diff)/se
+    # z_top_2 <- (test_slope - se * qnorm(0.975) + test_diff)/se
+    # 1-(-pnorm(z_bottom_2) + 1 + pnorm(z_top_2))
+      
+    p <- pnorm(-qnorm(1-sig_tail/2) - test_diff/se)
+    # p <- 1+pnorm(-qnorm(1-sig_tail/2) - test_diff/se) - pnorm(qnorm(1-sig_tail/2) - test_diff/se)
+      
+    } else {
+    
+    bottom <-
+      test_slope - se * qnorm(sig_tail, lower.tail = FALSE)
+    z_bottom <- (bottom - test_diff) / se
+    p <- 1- pnorm(z_bottom, lower.tail = FALSE)
+      
+    }
+    
+    p
+    
+  }
+
+ sim <- tribble(
+   ~ comp, ~ diff, ~ data, ~ form,
+   "Scotland – non-parallel trends", 0, u18_engscot, Value ~ Time + England + Time_Eng + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng, 
+   "Wales – non-parallel trends", 0, u18_engwal, Value ~ Time + England + Time_Eng + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng,
+   "Scotland – no correctors", 0, u18_engscot, Value ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng, 
+   "Wales – no correctors", 0, u18_engwal, Value ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng,
+    "Scotland – pill scare corrector", 0, u18_engscot, Value ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + PillScare, 
+    "Wales – pill scare corrector", 0, u18_engwal, Value ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + PillScare, 
+    "Scotland – pill scare and 2008 corrector", 0, u18_engscot, Value ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + Trend2 + PillScare, 
+    "Wales – pill scare and 2008 corrector", 0, u18_engwal, Value ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng +  Trend2 + PillScare
   )
 
   sim <- bind_rows(sim, mutate(sim, diff = diff - 0.5)) %>%
@@ -456,14 +576,15 @@ power_pred <-
     bind_rows(mutate(sim, diff = diff - 2))
 
 sim %>% 
-  mutate(comp = factor(comp, levels = c("scot_nopill", "wal_nopill", "scot_simple", "wal_simple", "scot_bump", "wal_bump" ))) %>% 
-  arrange(comp) %>% 
-  mutate(power = pmap_dbl(list(diff, data, form), ~ power_pred(..1,..2,..3))) %>% 
+  mutate(power = pmap_dbl(list(diff, data, form), ~ power_pred_alt(..1,..2,..3))) %>% 
   select(comp, diff, power) %>% 
   pivot_wider(id_cols = comp, names_from = diff, values_from = power, names_prefix = "diff_") %>% 
-  select(-diff_0) %>% 
-  mutate(across(where(is.numeric), ~paste0(round(.x, 3)*100, "%"))) %>% 
+  select(-diff_0) %>%
+  mutate(across(where(is.numeric), ~paste0(round(.x, 2)*100, "%"))) %>% 
   knitr::kable()
+
+
+
 ```
 
 
@@ -471,20 +592,19 @@ sim %>%
 
 ```{r test_synth}
 load("Data/p_values_synthetic_data.rdata")
+```
 
+```{r p_hist}
 p_table %>% 
-  mutate(comp = factor(comp, levels = c("scot_simple", "wal_simple", "scot_bump", "wal_bump"))) %>% 
   ggplot(aes(p)) +
   geom_histogram() +
   facet_grid(comp ~ diff, scales = "free_y")
 
 ```
 
-
 ```{r}
 
 p_table %>% 
-  mutate(comp = factor(comp, levels = c("scot_simple", "wal_simple", "scot_bump", "wal_bump"))) %>% 
   group_by(comp, diff) %>% 
   summarise(signif = sum(p<0.05)/n()) %>% 
   pivot_wider(id_cols = comp, names_from = diff, values_from = signif, names_prefix = "diff_")

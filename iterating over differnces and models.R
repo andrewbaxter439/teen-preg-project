@@ -7,15 +7,15 @@ return_p_tables <- function() {
   load("Data/all_uk_rates_u.rdata")
 
   sim_once <-
-    function(trend_diff = 0,
+    function(trend_diff = -0.5,
              data = u18_engscot,
              form = synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + PillScare,
-             mod = mod_scot,
+             mod = mod_scot_08,
              phi = scot_phi) {
       
       one_diff_mod <- mod$coefficients
       
-      if(!str_detect(as.character(form)[[3]], "Trend2")) {
+      if(!"Trend2" %in% names(one_diff_mod)) {
         one_diff_mod['Trend2'] <- 0
       }
       
@@ -53,6 +53,13 @@ return_p_tables <- function() {
           form = ~ Time | England
         )
       )
+      
+      new_data %>%
+        ungroup() %>% 
+        mutate(pred = predict(new_mod)) %>% 
+        ggplot(aes(Year, synth_pred, colour = Country)) +
+        geom_point() +
+        geom_line(aes(y = pred, group = interaction(Country, Cat1)))
       
       summary(new_mod)$tTable['Trend1_Eng', 'p-value']
     }
@@ -152,10 +159,19 @@ return_p_tables <- function() {
     ~ formula,
     ~ mod,
     ~ phi,
-    1:10000, "scot_simple", 0, u18_engscot, synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + PillScare, mod_scot, scot_phi,
-    1:10000, "wal_simple", 0, u18_engwal, synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + PillScare, mod_wal, wal_phi,
-    1:10000, "scot_bump", 0, u18_engscot, synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + Trend2 + PillScare, mod_scot_08, scot_phi_08, 
-    1:10000, "wal_bump", 0, u18_engwal, synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + Trend2 + PillScare, mod_wal_08, wal_phi_08
+    1:10000, "Scotland – non-parallel trends", 0, u18_engscot, synth_pred ~ Time + England + Time_Eng + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng, mod_scot_08, scot_phi_08,
+    1:10000, "Wales – non-parallel trends", 0, u18_engwal, synth_pred ~ Time + England + Time_Eng + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng, mod_wal_08, wal_phi_08,
+    1:10000, "Scotland – no correctors", 0, u18_engscot, synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng, mod_scot_08, scot_phi_08,
+    1:10000, "Wales – no correctors", 0, u18_engwal, synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng, mod_wal_08, wal_phi_08,
+    1:10000, "Scotland – pill scare corrector", 0, u18_engscot, synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + PillScare, mod_scot_08, scot_phi_08,
+    1:10000, "Wales – pill scare corrector", 0, u18_engwal, synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + PillScare, mod_wal_08, wal_phi_08,
+    1:10000, "Scotland – pill scare and 2008 corrector", 0, u18_engscot, synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + Trend2 + PillScare, mod_scot_08, scot_phi_08, 
+    1:10000, "Wales – pill scare and 2008 corrector", 0, u18_engwal, synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng +  Trend2 + PillScare, mod_wal_08, wal_phi_08
+    
+    # 1:1000, "scot_simple", 0, u18_engscot, synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + PillScare, mod_scot_08, scot_phi_08,
+    # 1:1000, "wal_simple", 0, u18_engwal, synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + PillScare, mod_wal_08, wal_phi_08,
+    # 1:1000, "scot_bump", 0, u18_engscot, synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + Trend2 + PillScare, mod_scot_08, scot_phi_08, 
+    # 1:1000, "wal_bump", 0, u18_engwal, synth_pred ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + Trend2 + PillScare, mod_wal_08, wal_phi_08
   )
   
   sim <- bind_rows(sim, mutate(sim, diff = diff - 0.5)) %>%
@@ -173,3 +189,37 @@ return_p_tables <- function() {
 }
 
 p_table <- return_p_tables()
+
+
+# alt way -----------------------------------------------------------------
+# 
+# trend <- -1
+# 
+# zero_dataset <- u18_engscot %>%
+#   mutate(resid = mod_scot$residuals,
+#          corrected = Value -
+#            mod_scot$coefficients['Trend1_Eng']*Trend1_Eng -
+#            mod_scot$coefficients['Cat1_Eng']*Cat1_Eng) 
+# 
+# 
+# null_mod <- gls(
+#   corrected ~ Time + England + Cat1 + Trend1 + Cat1_Eng + Trend1_Eng + PillScare,
+#   data = zero_dataset,
+#   method = "ML",
+#   correlation = corARMA(
+#     p = 1,
+#     q = 0,
+#     form = ~ Time | England
+#   )
+# )
+# 
+# zero_dataset %>% 
+#   mutate(pred = predict(null_mod)) %>% 
+#   ggplot(aes(Year, corrected, col = Country)) +
+# geom_point() +
+#   geom_line(aes(y = pred))
+# 
+# 
+# zero_dataset %>% 
+#   mutate(new_val = Value + 
+#            trend*)
